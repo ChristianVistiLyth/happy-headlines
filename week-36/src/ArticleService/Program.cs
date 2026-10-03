@@ -1,20 +1,32 @@
+using ArticleService.Controllers;
+using ArticleService.Data;
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+builder.Services.AddSingleton<ArticleDatabaseRouter>();
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.Configure<RouteOptions>(options => options.ConstraintMap["region"] = typeof(RegionRouteConstraint));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Create the tables in all eight region databases (and add sample articles) before taking requests
+await app.Services.GetRequiredService<ArticleDatabaseRouter>().MigrateAllAsync();
+
+// Tell the caller which of the three instances answered, so the load balancer can be seen at work
+var instanceName = app.Configuration["InstanceName"] ?? Environment.MachineName;
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Instance"] = instanceName;
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi();               // /openapi/v1.json
+    app.MapScalarApiReference();    // /scalar - API docs page
 }
-
-app.UseAuthorization();
 
 app.MapControllers();
 
