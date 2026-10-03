@@ -41,11 +41,15 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             subscriberQueue = container "SubscriberQueue" "Queue where new subscribers are put in when they subscribe." "" "Queue"
         }
 
+        // External software systems
+        emailSystem = softwareSystem "Email System" "Delivers emails to readers." "External"
+
         // Level 1: System context relationships
         // (defined first, so Structurizr doesn't invent extra arrows from the container relationships below)
         publisher -> happyHeadlines "Writes, saves drafts of and publishes articles using"
         reader -> happyHeadlines "Reads and comments on articles, and subscribes to the newsletter using"
-        happyHeadlines -> reader "Sends daily newsletter to"
+        happyHeadlines -> emailSystem "Sends newsletters using"
+        emailSystem -> reader "Delivers newsletters to"
 
         // Level 2: Drafting & publishing
         publisher -> webapp "Writes and publishes articles using"
@@ -76,7 +80,7 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         newsletterService -> articleQueue "Subscribes to receive the latest news first for immediate newsletter"
         newsletterService -> articleService "Request articles for daily newsletter"
         newsletterService -> subscriberService "Fetching active subscribers"
-        newsletterService -> reader "Sends daily newsletter to"
+        newsletterService -> emailSystem "Sends newsletters using"
     }
 
     views {
@@ -109,6 +113,9 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             }
             element "Container" {
                 background #438dd5
+            }
+            element "External" {
+                background #999999
             }
             element "WebBrowser" {
                 shape WebBrowser
