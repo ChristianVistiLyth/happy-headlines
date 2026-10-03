@@ -24,7 +24,7 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             draftService = container "DraftService" "Responsible for saving drafts of articles." "REST API" "Service"
             publisherService = container "PublisherService" "Responsible for handling the publishing of articles." "REST API" "Service"
             profanityService = container "ProfanityService" "Responsible for filtering out profanity in articles and comments." "REST API" "Service"
-            articleService = container "ArticleService" "Responsible for collecting articles for (sub)systems that request them." "REST API" "Service"
+            articleService = container "ArticleService" "Responsible for collecting articles for (sub)systems that request them. Runs as 3 identical instances (x-axis split)." "REST API" "Service"
             commentService = container "CommentService" "Responsible for handling comments on articles." "REST API" "Service"
             subscriberService = container "SubscriberService" "Responsible for handling newsletter subscriptions." "REST API" "Service"
             newsletterService = container "NewsletterService" "Responsible for sending out newsletters to subscribers." "REST API" "Service"
@@ -32,13 +32,16 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             // Databases
             draftDatabase = container "DraftDatabase" "Stores all drafts of articles." "" "Database"
             profanityDatabase = container "ProfanityDatabase" "Stores all profanity words." "" "Database"
-            articleDatabase = container "ArticleDatabase" "Stores all articles that are published on the website." "" "Database"
+            articleDatabase = container "ArticleDatabase" "Stores all articles that are published on the website. Split into one database per continent + one global (z-axis split)." "" "Database"
             commentDatabase = container "CommentDatabase" "Stores all comments that are posted on articles." "" "Database"
             subscriberDatabase = container "SubscriberDatabase" "Stores all newsletter subscribers." "" "Database"
 
             // Queues
             articleQueue = container "ArticleQueue" "Queue where articles are put in when they are published." "" "Queue"
             subscriberQueue = container "SubscriberQueue" "Queue where new subscribers are put in when they subscribe." "" "Queue"
+
+            // Load balancers
+            articleLoadBalancer = container "ArticleLoadBalancer" "Spreads requests across the three ArticleService instances (round-robin)." "" "LoadBalancer"
         }
 
         // External software systems
@@ -61,11 +64,12 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         publisherService -> articleQueue "Puts the published article into"
         profanityService -> profanityDatabase "Fetching profanity words"
         articleService -> articleQueue "Subscribes to the latest articles in order to persist them"
-        articleService -> articleDatabase "Fetching and storing articles"
+        articleLoadBalancer -> articleService "Forwards each request to one of the three instances"
+        articleService -> articleDatabase "Fetching and storing articles in the database of the article's region"
 
         // Level 2: Reading & commenting
         reader -> website "Reads and comments on articles, and subscribes to the newsletter using"
-        website -> articleService "Fetching the latest articles"
+        website -> articleLoadBalancer "Fetching the latest articles"
         website -> commentService "Posting a comment"
         website -> commentService "Requesting comments"
         commentService -> profanityService "Filtering out profanity"
@@ -78,7 +82,7 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         subscriberService -> subscriberQueue "Puts new subscribers into"
         newsletterService -> subscriberQueue "Subscribes to new subscribers"
         newsletterService -> articleQueue "Subscribes to receive the latest news first for immediate newsletter"
-        newsletterService -> articleService "Request articles for daily newsletter"
+        newsletterService -> articleLoadBalancer "Request articles for daily newsletter"
         newsletterService -> subscriberService "Fetching active subscribers"
         newsletterService -> emailSystem "Sends newsletters using"
     }

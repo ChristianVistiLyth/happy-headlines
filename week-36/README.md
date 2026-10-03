@@ -1,25 +1,30 @@
-# Week 35 – C4 diagrams
+# Week 36 – ArticleService
 
-The first two C4 levels of Happy Headlines.
+A REST API for articles (create, read, update, delete), scaled in two ways:
 
-## Level 1 – System context
-
-![System context](docs/images/c4-level1-context.png)
-
-## Level 2 – Containers
+- **x-axis split:** 3 identical ArticleService instances behind an nginx load balancer.
+- **z-axis split:** one PostgreSQL database per continent + one for global news (8 in total).
 
 ![Containers](docs/images/c4-level2-containers.png)
-
-## Assumptions
-
-- Newsletters are sent through an external Email System.
-- NewsletterService reads new subscribers from the SubscriberQueue.
-- No technologies yet – they are chosen in later weeks.
 
 ## Run
 
 ```sh
-docker compose up
+docker compose up -d --build
 ```
 
-Open http://localhost:8080
+| URL | What |
+|-----|------|
+| http://localhost:8081/scalar | API docs (through the load balancer) |
+| http://localhost:8080 | C4 diagrams |
+
+## Endpoints
+
+| Method | URL |
+|--------|-----|
+| GET, POST | `/api/regions/{region}/articles` |
+| GET, PUT, DELETE | `/api/regions/{region}/articles/{id}` |
+
+Regions: `africa`, `antarctica`, `asia`, `europe`, `northamerica`, `oceania`, `southamerica`, `global`.
+
+Ready-made requests: [ArticleService.http](src/ArticleService/ArticleService.http). The `X-Instance` response header shows which instance answered.
