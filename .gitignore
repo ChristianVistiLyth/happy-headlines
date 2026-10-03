@@ -10,9 +10,8 @@ TestResults/
 *.user
 *.suo
 
-# Structurizr Lite generated files (diagrams are generated from workspace.dsl)
+# Structurizr cache and logs (workspace.json is kept: it stores the manual diagram layout)
 .structurizr/
-workspace.json
 
 # OS
 .DS_Store

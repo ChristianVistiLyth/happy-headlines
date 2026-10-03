@@ -90,24 +90,25 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             autoLayout tb
         }
 
+        // Manual layout: box positions are stored in workspace.json
         container happyHeadlines "Containers" "Level 2: All containers in Happy Headlines." {
             include *
-            autoLayout tb
         }
 
+        // Standard C4 colours
         styles {
             element "Element" {
                 color #ffffff
             }
             element "Person" {
-                background #9b191f
+                background #08427b
                 shape person
             }
             element "Software System" {
-                background #ba1e25
+                background #1168bd
             }
             element "Container" {
-                background #d9232b
+                background #438dd5
             }
             element "WebBrowser" {
                 shape WebBrowser
