@@ -90,22 +90,6 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             autoLayout tb
         }
 
-        container happyHeadlines "DraftingAndPublishing" "Level 2: How a publisher drafts and publishes an article." {
-            include publisher webapp draftService draftDatabase publisherService profanityService profanityDatabase articleQueue articleService articleDatabase
-            autoLayout lr
-        }
-
-        container happyHeadlines "ReadingAndCommenting" "Level 2: How a reader reads articles and posts comments." {
-            include reader website articleService articleDatabase commentService commentDatabase profanityService profanityDatabase
-            autoLayout lr
-        }
-
-        container happyHeadlines "SubscribingAndNewsletter" "Level 2: How a reader subscribes and receives the newsletter." {
-            include reader website subscriberService subscriberDatabase subscriberQueue newsletterService articleService articleQueue
-            exclude "website -> articleService"
-            autoLayout lr
-        }
-
         styles {
             element "Element" {
                 color #ffffff
