@@ -1,0 +1,19 @@
+# .NET build output
+bin/
+obj/
+TestResults/
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Structurizr Lite generated files (diagrams are generated from workspace.dsl)
+.structurizr/
+workspace.json
+
+# OS
+.DS_Store
+Thumbs.db
