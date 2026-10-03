@@ -1,5 +1,6 @@
 using ArticleService.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ArticleService.Data;
 
@@ -40,7 +41,14 @@ public static class SampleArticles
             });
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // The three instances start at the same time; another instance added the samples first
+        }
     }
 
     /// <summary>Readable ids, e.g. Europe's first sample article is 00000004-0000-0000-0000-000000000001.</summary>

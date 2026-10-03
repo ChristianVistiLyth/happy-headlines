@@ -1,5 +1,6 @@
 using ArticleService.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ArticleService.Data;
 
@@ -19,8 +20,11 @@ public class ArticleDatabaseRouter
             var connectionString = configuration[$"ArticleDatabases:{region}"]
                 ?? throw new InvalidOperationException($"Missing connection string 'ArticleDatabases:{region}'");
 
+            // We don't use Kerberos login; without this the driver probes for it and logs an error
+            var connection = new NpgsqlConnectionStringBuilder(connectionString) { GssEncryptionMode = GssEncryptionMode.Disable };
+
             _optionsByRegion[region] = new DbContextOptionsBuilder<ArticleDbContext>()
-                .UseNpgsql(connectionString)
+                .UseNpgsql(connection.ConnectionString)
                 .UseAsyncSeeding((db, _, cancellationToken) => SampleArticles.SeedAsync(db, region, cancellationToken))
                 .Options;
         }
