@@ -7,3 +7,4 @@ Each `week-XX` folder is a complete, standalone snapshot of the system as it was
 | Week | Topic | Folder |
 |------|-------|--------|
 | 35 | C4 diagrams: context and container level | [week-35](week-35) |
+| 36 | ArticleService: 3 instances behind a load balancer, one database per continent | [week-36](week-36) |
