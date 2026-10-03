@@ -10,9 +10,9 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
     }
 
     model {
-        // People
-        publisher = person "Publisher" "A journalist who writes and publishes articles."
+        // People (Reader is defined first so autoLayout keeps both people above the system)
         reader = person "Reader" "A person who reads, comments on and subscribes to positive news."
+        publisher = person "Publisher" "A journalist who writes and publishes articles."
 
         // Software system with its containers (Level 2)
         happyHeadlines = softwareSystem "Happy Headlines" "Lets publishers write and publish positive news, and lets readers read, comment on and subscribe to it." {
@@ -80,9 +80,14 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
     }
 
     views {
+        properties {
+            // Hide the timestamp under each diagram
+            "structurizr.metadata" "false"
+        }
+
         systemContext happyHeadlines "SystemContext" "Level 1: Who uses Happy Headlines." {
             include *
-            autoLayout lr
+            autoLayout tb
         }
 
         container happyHeadlines "Containers" "Level 2: All containers in Happy Headlines." {
