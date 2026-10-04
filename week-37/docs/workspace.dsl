@@ -20,28 +20,34 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             webapp = container "Webapp" "The webapp where publishers can write and publish articles." "" "WebBrowser"
             website = container "Website" "Shows the ten most recent articles with one focus article in the very top." "" "WebBrowser"
 
+            // Swimlanes: each lane has its own service(s) and database(s) and shares nothing with the other lanes
+            group "Article swimlane" {
+                articleLoadBalancer = container "ArticleLoadBalancer" "Spreads requests across the three ArticleService instances (round-robin)." "" "LoadBalancer"
+                articleService = container "ArticleService" "Responsible for collecting articles for (sub)systems that request them. Runs as 3 identical instances (x-axis split)." "REST API" "Service"
+                articleDatabase = container "ArticleDatabase" "Stores all articles that are published on the website. Split into one database per continent + one global (z-axis split)." "" "Database"
+            }
+            group "Comment swimlane" {
+                commentService = container "CommentService" "Responsible for handling comments on articles. Rejects new comments while ProfanityService is unavailable." "REST API" "Service"
+                commentDatabase = container "CommentDatabase" "Stores all comments that are posted on articles." "" "Database"
+            }
+            group "Profanity swimlane" {
+                profanityService = container "ProfanityService" "Responsible for filtering out profanity in articles and comments." "REST API" "Service"
+                profanityDatabase = container "ProfanityDatabase" "Stores all profanity words." "" "Database"
+            }
+
             // Services
             draftService = container "DraftService" "Responsible for saving drafts of articles." "REST API" "Service"
             publisherService = container "PublisherService" "Responsible for handling the publishing of articles." "REST API" "Service"
-            profanityService = container "ProfanityService" "Responsible for filtering out profanity in articles and comments." "REST API" "Service"
-            articleService = container "ArticleService" "Responsible for collecting articles for (sub)systems that request them. Runs as 3 identical instances (x-axis split)." "REST API" "Service"
-            commentService = container "CommentService" "Responsible for handling comments on articles." "REST API" "Service"
             subscriberService = container "SubscriberService" "Responsible for handling newsletter subscriptions." "REST API" "Service"
             newsletterService = container "NewsletterService" "Responsible for sending out newsletters to subscribers." "REST API" "Service"
 
             // Databases
             draftDatabase = container "DraftDatabase" "Stores all drafts of articles." "" "Database"
-            profanityDatabase = container "ProfanityDatabase" "Stores all profanity words." "" "Database"
-            articleDatabase = container "ArticleDatabase" "Stores all articles that are published on the website. Split into one database per continent + one global (z-axis split)." "" "Database"
-            commentDatabase = container "CommentDatabase" "Stores all comments that are posted on articles." "" "Database"
             subscriberDatabase = container "SubscriberDatabase" "Stores all newsletter subscribers." "" "Database"
 
             // Queues
             articleQueue = container "ArticleQueue" "Queue where articles are put in when they are published." "" "Queue"
             subscriberQueue = container "SubscriberQueue" "Queue where new subscribers are put in when they subscribe." "" "Queue"
-
-            // Load balancers
-            articleLoadBalancer = container "ArticleLoadBalancer" "Spreads requests across the three ArticleService instances (round-robin)." "" "LoadBalancer"
         }
 
         // External software systems
@@ -72,7 +78,7 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         website -> articleLoadBalancer "Fetching the latest articles"
         website -> commentService "Posting a comment"
         website -> commentService "Requesting comments"
-        commentService -> profanityService "Filtering out profanity"
+        commentService -> profanityService "Filtering out profanity (circuit breaker)"
         commentService -> commentDatabase "Storing a comment"
         commentService -> commentDatabase "Fetching comments"
 
