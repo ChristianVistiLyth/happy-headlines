@@ -30,19 +30,21 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
                 commentService = container "CommentService" "Responsible for handling comments on articles. Rejects new comments while ProfanityService is unavailable." "REST API" "Service"
                 commentDatabase = container "CommentDatabase" "Stores all comments that are posted on articles." "" "Database"
             }
+            group "Draft swimlane" {
+                draftService = container "DraftService" "Responsible for saving drafts of articles." "REST API" "Service"
+                draftDatabase = container "DraftDatabase" "Stores all drafts of articles." "" "Database"
+            }
             group "Profanity swimlane" {
                 profanityService = container "ProfanityService" "Responsible for filtering out profanity in articles and comments." "REST API" "Service"
                 profanityDatabase = container "ProfanityDatabase" "Stores all profanity words." "" "Database"
             }
 
             // Services
-            draftService = container "DraftService" "Responsible for saving drafts of articles." "REST API" "Service"
             publisherService = container "PublisherService" "Responsible for handling the publishing of articles." "REST API" "Service"
             subscriberService = container "SubscriberService" "Responsible for handling newsletter subscriptions." "REST API" "Service"
             newsletterService = container "NewsletterService" "Responsible for sending out newsletters to subscribers." "REST API" "Service"
 
             // Databases
-            draftDatabase = container "DraftDatabase" "Stores all drafts of articles." "" "Database"
             subscriberDatabase = container "SubscriberDatabase" "Stores all newsletter subscribers." "" "Database"
 
             // Queues
