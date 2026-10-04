@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -28,11 +29,17 @@ public static class MonitoringExtensions
         builder.Logging.AddFilter("System", LogLevel.Warning);
         builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Information);
 
+        // Send the finished sentence ("Draft 42 deleted"), not only the template ("Draft {DraftId} deleted")
+        builder.Services.Configure<OpenTelemetryLoggerOptions>(options => options.IncludeFormattedMessage = true);
+
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(serviceName, serviceInstanceId: instanceName))
             .WithLogging()
             .WithTracing(tracing => tracing
-                .AddAspNetCoreInstrumentation()   // incoming HTTP requests
+                // Incoming HTTP requests - except the API docs pages, which are not system traffic
+                .AddAspNetCoreInstrumentation(options => options.Filter = context =>
+                    !context.Request.Path.StartsWithSegments("/swagger") &&
+                    !context.Request.Path.StartsWithSegments("/openapi"))
                 .AddHttpClientInstrumentation()   // outgoing HTTP calls to other services
                 .AddSource("Npgsql"))             // database queries
             .UseOtlpExporter();
