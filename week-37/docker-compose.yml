@@ -1,0 +1,117 @@
+# Week 36: ArticleService runs as 3 instances behind nginx (x-axis split)
+# and ArticleDatabase is split into one database per region (z-axis split).
+#
+#   http://localhost:8080          Structurizr (C4 diagrams)
+#   http://localhost:8081          ArticleService through the load balancer
+#   http://localhost:8081/scalar   API docs page
+
+# Shared settings for the eight region databases
+x-article-database: &article-database
+  image: postgres:17-alpine
+  environment:
+    POSTGRES_DB: articles
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres -d articles"]
+    interval: 5s
+    timeout: 3s
+    retries: 10
+
+# Shared settings for the three ArticleService instances
+x-article-service: &article-service
+  build: ./src/ArticleService
+  image: happy-headlines/article-service:week-36
+  environment: &article-service-environment
+    ASPNETCORE_ENVIRONMENT: Development
+    ArticleDatabases__Africa: Host=article-db-africa;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Antarctica: Host=article-db-antarctica;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Asia: Host=article-db-asia;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Europe: Host=article-db-europe;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__NorthAmerica: Host=article-db-north-america;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Oceania: Host=article-db-oceania;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__SouthAmerica: Host=article-db-south-america;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Global: Host=article-db-global;Database=articles;Username=postgres;Password=postgres
+  depends_on:
+    article-db-africa: { condition: service_healthy }
+    article-db-antarctica: { condition: service_healthy }
+    article-db-asia: { condition: service_healthy }
+    article-db-europe: { condition: service_healthy }
+    article-db-north-america: { condition: service_healthy }
+    article-db-oceania: { condition: service_healthy }
+    article-db-south-america: { condition: service_healthy }
+    article-db-global: { condition: service_healthy }
+
+services:
+  structurizr:
+    image: structurizr/structurizr
+    command: local
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docs:/usr/local/structurizr
+
+  # ArticleDatabase, z-axis split: one database per continent + one for global news
+  article-db-africa:
+    <<: *article-database
+    volumes: [article-db-africa:/var/lib/postgresql/data]
+  article-db-antarctica:
+    <<: *article-database
+    volumes: [article-db-antarctica:/var/lib/postgresql/data]
+  article-db-asia:
+    <<: *article-database
+    volumes: [article-db-asia:/var/lib/postgresql/data]
+  article-db-europe:
+    <<: *article-database
+    volumes: [article-db-europe:/var/lib/postgresql/data]
+  article-db-north-america:
+    <<: *article-database
+    volumes: [article-db-north-america:/var/lib/postgresql/data]
+  article-db-oceania:
+    <<: *article-database
+    volumes: [article-db-oceania:/var/lib/postgresql/data]
+  article-db-south-america:
+    <<: *article-database
+    volumes: [article-db-south-america:/var/lib/postgresql/data]
+  article-db-global:
+    <<: *article-database
+    volumes: [article-db-global:/var/lib/postgresql/data]
+
+  # ArticleService, x-axis split: three identical instances
+  article-service-1:
+    <<: *article-service
+    environment:
+      <<: *article-service-environment
+      InstanceName: article-service-1
+  article-service-2:
+    <<: *article-service
+    environment:
+      <<: *article-service-environment
+      InstanceName: article-service-2
+  article-service-3:
+    <<: *article-service
+    environment:
+      <<: *article-service-environment
+      InstanceName: article-service-3
+
+  # Load balancer in front of the three instances
+  article-load-balancer:
+    image: nginx:alpine
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - article-service-1
+      - article-service-2
+      - article-service-3
+
+volumes:
+  article-db-africa:
+  article-db-antarctica:
+  article-db-asia:
+  article-db-europe:
+  article-db-north-america:
+  article-db-oceania:
+  article-db-south-america:
+  article-db-global:
