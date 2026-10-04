@@ -3,7 +3,7 @@
 #
 #   http://localhost:8080          Structurizr (C4 diagrams)
 #   http://localhost:8081          ArticleService through the load balancer
-#   http://localhost:8081/scalar   API docs page
+#   http://localhost:8081/swagger  API docs page
 
 # Shared settings for the eight region databases
 x-article-database: &article-database

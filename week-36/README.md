@@ -15,7 +15,7 @@ docker compose up -d --build
 
 | URL | What |
 |-----|------|
-| http://localhost:8081/scalar | API docs (through the load balancer) |
+| http://localhost:8081/swagger | API docs (through the load balancer) |
 | http://localhost:8080 | C4 diagrams |
 
 ## Endpoints

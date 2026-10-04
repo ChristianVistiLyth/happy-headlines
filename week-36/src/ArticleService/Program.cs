@@ -1,6 +1,5 @@
 using ArticleService.Controllers;
 using ArticleService.Data;
-using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,7 +24,7 @@ app.Use(async (context, next) =>
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();               // /openapi/v1.json
-    app.MapScalarApiReference();    // /scalar - API docs page
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "ArticleService"));   // /swagger - API docs page
 }
 
 app.MapControllers();
