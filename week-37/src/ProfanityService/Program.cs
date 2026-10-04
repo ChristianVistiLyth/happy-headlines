@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using ProfanityService.Data;
-using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +27,7 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();               // /openapi/v1.json
-    app.MapScalarApiReference();    // /scalar - API docs page
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "ProfanityService"));   // /swagger - API docs page
 }
 
 app.MapControllers();

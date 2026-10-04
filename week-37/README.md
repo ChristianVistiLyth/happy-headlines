@@ -16,9 +16,9 @@ docker compose up -d --build
 
 | URL | What |
 |-----|------|
-| http://localhost:8081/scalar | ArticleService (through the load balancer) |
-| http://localhost:8082/scalar | CommentService |
-| http://localhost:8083/scalar | ProfanityService |
+| http://localhost:8081/swagger | ArticleService (through the load balancer) |
+| http://localhost:8082/swagger | CommentService |
+| http://localhost:8083/swagger | ProfanityService |
 | http://localhost:8080 | C4 diagrams |
 
 ## Circuit breaker demo

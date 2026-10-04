@@ -3,9 +3,9 @@
 # CommentService calls ProfanityService directly, protected by a circuit breaker.
 #
 #   http://localhost:8080          Structurizr (C4 diagrams)
-#   http://localhost:8081/scalar   ArticleService (through the load balancer)
-#   http://localhost:8082/scalar   CommentService
-#   http://localhost:8083/scalar   ProfanityService
+#   http://localhost:8081/swagger  ArticleService (through the load balancer)
+#   http://localhost:8082/swagger  CommentService
+#   http://localhost:8083/swagger  ProfanityService
 
 # Shared settings for the eight region databases
 x-article-database: &article-database
