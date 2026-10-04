@@ -22,7 +22,7 @@ flowchart LR
     subgraph commentLane["Comment swimlane"]
         commentService{{"CommentService"}}
         commentDb[("CommentDatabase")]
-        breaker["circuit breaker<br/>after repeated failures:<br/>stop calling ProfanityService<br/>for 15 s, reject new<br/>comments with 503"]
+        breaker["circuit breaker<br/>(part of CommentService)<br/>ProfanityService failing?<br/>reject new comments<br/>with 503 for 15 s"]
         commentService -- "store / read<br/>comments" --> commentDb
         commentService -- "new<br/>comment" --> breaker
     end
@@ -39,13 +39,13 @@ flowchart LR
 
     classDef client fill:#08427b,stroke:#052e56,color:#fff
     classDef container fill:#438dd5,stroke:#2e6295,color:#fff
-    classDef note fill:#fff,stroke:#999,stroke-dasharray:3 3,color:#333
+    classDef note fill:none,stroke:#888,stroke-dasharray:3 3
     class client client
     class articleLb,articleService,articleDb,commentService,commentDb,profanityService,profanityDb container
     class breaker note
-    style articleLane fill:none,stroke:#1168bd,stroke-dasharray:6 4,color:#1168bd
-    style commentLane fill:none,stroke:#1168bd,stroke-dasharray:6 4,color:#1168bd
-    style profanityLane fill:none,stroke:#1168bd,stroke-dasharray:6 4,color:#1168bd
+    style articleLane fill:none,stroke:#3d7fc9,stroke-dasharray:6 4,color:#3d7fc9
+    style commentLane fill:none,stroke:#3d7fc9,stroke-dasharray:6 4,color:#3d7fc9
+    style profanityLane fill:none,stroke:#3d7fc9,stroke-dasharray:6 4,color:#3d7fc9
 ```
 
 ## C4 container diagram

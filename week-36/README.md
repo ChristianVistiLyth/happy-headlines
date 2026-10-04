@@ -42,14 +42,14 @@ flowchart TB
 
     classDef client fill:#08427b,stroke:#052e56,color:#fff
     classDef container fill:#438dd5,stroke:#2e6295,color:#fff
-    classDef note fill:#fff,stroke:#999,stroke-dasharray:3 3,color:#333
-    classDef axis fill:none,stroke:none,color:#1168bd,font-weight:bold
+    classDef note fill:none,stroke:#888,stroke-dasharray:3 3
+    classDef axis fill:none,stroke:none,color:#3d7fc9,font-weight:bold
     class client client
     class lb,s1,s2,s3,africa,antarctica,asia,europe,northAmerica,oceania,southAmerica,globalDb container
     class router note
     class xlabel,zlabel axis
-    style xaxis fill:none,stroke:#1168bd,stroke-dasharray:6 4,color:#1168bd
-    style zaxis fill:none,stroke:#1168bd,stroke-dasharray:6 4,color:#1168bd
+    style xaxis fill:none,stroke:#3d7fc9,stroke-dasharray:6 4,color:#3d7fc9
+    style zaxis fill:none,stroke:#3d7fc9,stroke-dasharray:6 4,color:#3d7fc9
 ```
 
 ## C4 container diagram
