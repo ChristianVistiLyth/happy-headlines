@@ -4,7 +4,6 @@ namespace ArticleService.Models;
 
 public class Article
 {
-    // Guid instead of int: ids must stay unique across all eight region databases
     public Guid Id { get; set; }
 
     [MaxLength(200)]

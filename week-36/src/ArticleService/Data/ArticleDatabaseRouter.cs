@@ -32,7 +32,7 @@ public class ArticleDatabaseRouter
 
     public ArticleDbContext Open(Region region) => new(_optionsByRegion[region]);
 
-    /// <summary>Creates or updates the tables in all eight databases and adds the sample articles.</summary>
+    /// <summary> Creates or updates the tables in all eight databases and adds the sample articles.</summary>
     public async Task MigrateAllAsync()
     {
         foreach (var region in Enum.GetValues<Region>())
