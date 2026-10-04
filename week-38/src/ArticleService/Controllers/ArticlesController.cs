@@ -7,10 +7,11 @@ namespace ArticleService.Controllers;
 
 /// <summary>
 /// CRUD for articles. The region in the URL decides which of the eight databases is used.
+/// Logging policy: Information when something changes, Warning when an article is not found, ids only.
 /// </summary>
 [ApiController]
 [Route("api/regions/{region:region}/articles")]
-public class ArticlesController(ArticleDatabaseRouter router) : ControllerBase
+public class ArticlesController(ArticleDatabaseRouter router, ILogger<ArticlesController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<Article>>> GetAll(Region region)
@@ -24,7 +25,13 @@ public class ArticlesController(ArticleDatabaseRouter router) : ControllerBase
     {
         await using var db = router.Open(region);
         var article = await db.Articles.FindAsync(id);
-        return article is null ? NotFound() : article;
+        if (article is null)
+        {
+            logger.LogWarning("Article {ArticleId} not found in {Region}", id, region);
+            return NotFound();
+        }
+
+        return article;
     }
 
     [HttpPost]
@@ -43,6 +50,7 @@ public class ArticlesController(ArticleDatabaseRouter router) : ControllerBase
         await using var db = router.Open(region);
         db.Articles.Add(article);
         await db.SaveChangesAsync();
+        logger.LogInformation("Article {ArticleId} created in {Region} by {Author}", article.Id, region, article.Author);
 
         return CreatedAtAction(nameof(Get), new { region, id = article.Id }, article);
     }
@@ -54,6 +62,7 @@ public class ArticlesController(ArticleDatabaseRouter router) : ControllerBase
         var article = await db.Articles.FindAsync(id);
         if (article is null)
         {
+            logger.LogWarning("Article {ArticleId} not found in {Region}, nothing updated", id, region);
             return NotFound();
         }
 
@@ -61,6 +70,7 @@ public class ArticlesController(ArticleDatabaseRouter router) : ControllerBase
         article.Content = request.Content;
         article.Author = request.Author;
         await db.SaveChangesAsync();
+        logger.LogInformation("Article {ArticleId} updated in {Region}", id, region);
 
         return NoContent();
     }
@@ -70,6 +80,13 @@ public class ArticlesController(ArticleDatabaseRouter router) : ControllerBase
     {
         await using var db = router.Open(region);
         var deleted = await db.Articles.Where(a => a.Id == id).ExecuteDeleteAsync();
-        return deleted == 0 ? NotFound() : NoContent();
+        if (deleted == 0)
+        {
+            logger.LogWarning("Article {ArticleId} not found in {Region}, nothing deleted", id, region);
+            return NotFound();
+        }
+
+        logger.LogInformation("Article {ArticleId} deleted from {Region}", id, region);
+        return NoContent();
     }
 }

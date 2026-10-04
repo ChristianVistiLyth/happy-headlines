@@ -2,10 +2,14 @@ using CommentService.Clients;
 using CommentService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http.Resilience;
+using Monitoring;
 using Npgsql;
 using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Central logging and tracing (shared Monitoring library)
+builder.AddMonitoring();
 
 var connectionString = builder.Configuration.GetConnectionString("CommentDatabase")
     ?? throw new InvalidOperationException("Missing connection string 'CommentDatabase'");

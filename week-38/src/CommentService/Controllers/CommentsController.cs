@@ -51,6 +51,8 @@ public class CommentsController(CommentDbContext db, ProfanityClient profanity, 
 
         db.Comments.Add(comment);
         await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Comment {CommentId} saved on article {ArticleId} (profanity masked: {ContainedProfanity})",
+            comment.Id, articleId, filtered.ContainedProfanity);
 
         return CreatedAtAction(nameof(GetAll), new { articleId }, comment);
     }

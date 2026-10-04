@@ -1,7 +1,11 @@
 using ArticleService.Controllers;
 using ArticleService.Data;
+using Monitoring;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Central logging and tracing (shared Monitoring library)
+builder.AddMonitoring();
 
 builder.Services.AddSingleton<ArticleDatabaseRouter>();
 builder.Services.AddControllers();

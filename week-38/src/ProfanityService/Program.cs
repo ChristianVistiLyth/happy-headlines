@@ -1,8 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Monitoring;
 using Npgsql;
 using ProfanityService.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Central logging and tracing (shared Monitoring library)
+builder.AddMonitoring();
 
 var connectionString = builder.Configuration.GetConnectionString("ProfanityDatabase")
     ?? throw new InvalidOperationException("Missing connection string 'ProfanityDatabase'");
