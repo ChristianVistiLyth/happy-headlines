@@ -1,0 +1,222 @@
+# Week 38: four swimlanes - Article, Comment, Profanity and Draft - each with its own service(s) and database(s).
+# ArticleService runs as 3 instances behind nginx (x-axis split) with one database per region (z-axis split).
+# CommentService calls ProfanityService directly, protected by a circuit breaker.
+# Every service sends its logs and traces to the central monitoring stack (OpenTelemetry → Loki/Tempo → Grafana).
+#
+#   http://localhost:3000          Grafana (logs and traces)
+#   http://localhost:8080          Structurizr (C4 diagrams)
+#   http://localhost:8081/swagger  ArticleService (through the load balancer)
+#   http://localhost:8082/swagger  CommentService
+#   http://localhost:8083/swagger  ProfanityService
+#   http://localhost:8084/swagger  DraftService
+
+# Shared settings for the eight region databases
+x-article-database: &article-database
+  image: postgres:17-alpine
+  environment:
+    POSTGRES_DB: articles
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d articles"]
+    interval: 5s
+    timeout: 3s
+    retries: 10
+
+# Shared settings for the three ArticleService instances
+x-article-service: &article-service
+  build:
+    context: ./src
+    dockerfile: ArticleService/Dockerfile
+  image: happy-headlines/article-service:week-39
+  environment: &article-service-environment
+    ASPNETCORE_ENVIRONMENT: Development
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+    ArticleDatabases__Africa: Host=article-db-africa;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Antarctica: Host=article-db-antarctica;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Asia: Host=article-db-asia;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Europe: Host=article-db-europe;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__NorthAmerica: Host=article-db-north-america;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Oceania: Host=article-db-oceania;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__SouthAmerica: Host=article-db-south-america;Database=articles;Username=postgres;Password=postgres
+    ArticleDatabases__Global: Host=article-db-global;Database=articles;Username=postgres;Password=postgres
+  depends_on:
+    article-db-africa: { condition: service_healthy }
+    article-db-antarctica: { condition: service_healthy }
+    article-db-asia: { condition: service_healthy }
+    article-db-europe: { condition: service_healthy }
+    article-db-north-america: { condition: service_healthy }
+    article-db-oceania: { condition: service_healthy }
+    article-db-south-america: { condition: service_healthy }
+    article-db-global: { condition: service_healthy }
+
+services:
+  structurizr:
+    image: structurizr/structurizr
+    command: local
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docs:/usr/local/structurizr
+
+  # Central monitoring in one container: OpenTelemetry Collector (receives logs and traces),
+  # Loki (stores logs), Tempo (stores traces), Prometheus (stores metrics) and Grafana (shows it all).
+  # No service depends on it: if monitoring is down, the system keeps working.
+  monitoring:
+    image: grafana/otel-lgtm
+    ports:
+      - "3000:3000"
+    volumes:
+      - monitoring:/data
+
+  # ArticleDatabase, z-axis split: one database per continent + one for global news
+  article-db-africa:
+    <<: *article-database
+    volumes: [article-db-africa:/var/lib/postgresql/data]
+  article-db-antarctica:
+    <<: *article-database
+    volumes: [article-db-antarctica:/var/lib/postgresql/data]
+  article-db-asia:
+    <<: *article-database
+    volumes: [article-db-asia:/var/lib/postgresql/data]
+  article-db-europe:
+    <<: *article-database
+    volumes: [article-db-europe:/var/lib/postgresql/data]
+  article-db-north-america:
+    <<: *article-database
+    volumes: [article-db-north-america:/var/lib/postgresql/data]
+  article-db-oceania:
+    <<: *article-database
+    volumes: [article-db-oceania:/var/lib/postgresql/data]
+  article-db-south-america:
+    <<: *article-database
+    volumes: [article-db-south-america:/var/lib/postgresql/data]
+  article-db-global:
+    <<: *article-database
+    volumes: [article-db-global:/var/lib/postgresql/data]
+
+  # ArticleService, x-axis split: three identical instances
+  article-service-1:
+    <<: *article-service
+    environment:
+      <<: *article-service-environment
+      InstanceName: article-service-1
+  article-service-2:
+    <<: *article-service
+    environment:
+      <<: *article-service-environment
+      InstanceName: article-service-2
+  article-service-3:
+    <<: *article-service
+    environment:
+      <<: *article-service-environment
+      InstanceName: article-service-3
+
+  # Load balancer in front of the three instances
+  article-load-balancer:
+    image: nginx:alpine
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - article-service-1
+      - article-service-2
+      - article-service-3
+
+  # Comment swimlane: its own service and its own database
+  comment-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: comments
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d comments"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes: [comment-db:/var/lib/postgresql/data]
+  comment-service:
+    build:
+      context: ./src
+      dockerfile: CommentService/Dockerfile
+    image: happy-headlines/comment-service:week-39
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      ConnectionStrings__CommentDatabase: Host=comment-db;Database=comments;Username=postgres;Password=postgres
+      ProfanityService__BaseUrl: http://profanity-service:8080/
+    ports:
+      - "8082:8080"
+    # Deliberately NOT depending on profanity-service: CommentService must start, and serve comments, without it
+    depends_on:
+      comment-db: { condition: service_healthy }
+
+  # Profanity swimlane: its own service and its own database
+  profanity-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: profanity
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d profanity"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes: [profanity-db:/var/lib/postgresql/data]
+  profanity-service:
+    build:
+      context: ./src
+      dockerfile: ProfanityService/Dockerfile
+    image: happy-headlines/profanity-service:week-39
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      ConnectionStrings__ProfanityDatabase: Host=profanity-db;Database=profanity;Username=postgres;Password=postgres
+    ports:
+      - "8083:8080"
+    depends_on:
+      profanity-db: { condition: service_healthy }
+
+  # Draft swimlane: its own service and its own database
+  draft-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: drafts
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d drafts"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes: [draft-db:/var/lib/postgresql/data]
+  draft-service:
+    build:
+      context: ./src
+      dockerfile: DraftService/Dockerfile
+    image: happy-headlines/draft-service:week-39
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      ConnectionStrings__DraftDatabase: Host=draft-db;Database=drafts;Username=postgres;Password=postgres
+    ports:
+      - "8084:8080"
+    depends_on:
+      draft-db: { condition: service_healthy }
+
+volumes:
+  monitoring:
+  article-db-africa:
+  article-db-antarctica:
+  article-db-asia:
+  article-db-europe:
+  article-db-north-america:
+  article-db-oceania:
+  article-db-south-america:
+  article-db-global:
+  comment-db:
+  profanity-db:
+  draft-db:
