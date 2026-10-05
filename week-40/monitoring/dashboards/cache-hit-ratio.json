@@ -226,15 +226,203 @@
       }
     },
     {
+      "id": 6,
+      "type": "stat",
+      "title": "ArticleCache - average response time: hit vs miss",
+      "description": "Average time of one read in the selected time range. A miss includes the trip to the database, a hit does not.",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "legendFormat": "hit",
+          "expr": "sum(increase(cache_read_duration_seconds_sum{cache=\"article\",result=\"hit\"}[$__range])) / sum(increase(cache_read_duration_seconds_count{cache=\"article\",result=\"hit\"}[$__range])) * 1000"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "legendFormat": "miss",
+          "expr": "sum(increase(cache_read_duration_seconds_sum{cache=\"article\",result=\"miss\"}[$__range])) / sum(increase(cache_read_duration_seconds_count{cache=\"article\",result=\"miss\"}[$__range])) * 1000"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "vertical"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "CommentCache - average response time: hit vs miss",
+      "description": "Average time of one read in the selected time range. A miss includes the trip to the database, a hit does not.",
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "legendFormat": "hit",
+          "expr": "sum(increase(cache_read_duration_seconds_sum{cache=\"comment\",result=\"hit\"}[$__range])) / sum(increase(cache_read_duration_seconds_count{cache=\"comment\",result=\"hit\"}[$__range])) * 1000"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "legendFormat": "miss",
+          "expr": "sum(increase(cache_read_duration_seconds_sum{cache=\"comment\",result=\"miss\"}[$__range])) / sum(increase(cache_read_duration_seconds_count{cache=\"comment\",result=\"miss\"}[$__range])) * 1000"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "vertical"
+      }
+    },
+    {
       "id": 4,
       "type": "timeseries",
       "title": "Hit ratio over time",
       "description": "Hits / all reads per cache, over the last minute at each point in time.",
       "gridPos": {
         "x": 0,
-        "y": 6,
-        "w": 8,
-        "h": 9
+        "y": 11,
+        "w": 12,
+        "h": 8
       },
       "datasource": {
         "type": "prometheus",
@@ -282,10 +470,10 @@
       "title": "Hits and misses per second",
       "description": "How many reads per second were hits and how many were misses, per cache.",
       "gridPos": {
-        "x": 8,
-        "y": 6,
-        "w": 8,
-        "h": 9
+        "x": 12,
+        "y": 11,
+        "w": 12,
+        "h": 8
       },
       "datasource": {
         "type": "prometheus",
@@ -305,56 +493,6 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "min": 0,
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 6,
-      "type": "timeseries",
-      "title": "Average response time - hit vs miss",
-      "description": "How long a read takes on average. A miss includes the trip to the database, a hit does not.",
-      "gridPos": {
-        "x": 16,
-        "y": 6,
-        "w": 8,
-        "h": 9
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (cache, result) (rate(cache_read_duration_seconds_sum[1m])) / sum by (cache, result) (rate(cache_read_duration_seconds_count[1m]))",
-          "legendFormat": "{{cache}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
           "min": 0,
           "custom": {
             "lineWidth": 2,
