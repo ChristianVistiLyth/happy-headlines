@@ -1,6 +1,7 @@
-# Week 38: four swimlanes - Article, Comment, Profanity and Draft - each with its own service(s) and database(s).
-# ArticleService runs as 3 instances behind nginx (x-axis split) with one database per region (z-axis split).
-# CommentService calls ProfanityService directly, protected by a circuit breaker.
+# Week 39: publishing through the ArticleQueue, with traces that stay whole across services and the queue.
+# PublisherService puts published articles on the ArticleQueue (RabbitMQ); ArticleService stores them,
+# NewsletterService sends an immediate newsletter, and asks ArticleService for the daily newsletter.
+# Swimlanes: Article, Comment, Profanity and Draft each have their own service(s) and database(s).
 # Every service sends its logs and traces to the central monitoring stack (OpenTelemetry → Loki/Tempo → Grafana).
 #
 #   http://localhost:3000          Grafana (logs and traces)
@@ -9,6 +10,9 @@
 #   http://localhost:8082/swagger  CommentService
 #   http://localhost:8083/swagger  ProfanityService
 #   http://localhost:8084/swagger  DraftService
+#   http://localhost:8085/swagger  PublisherService
+#   http://localhost:8086/swagger  NewsletterService
+#   http://localhost:15672         RabbitMQ (ArticleQueue) - login guest / guest
 
 # Shared settings for the eight region databases
 x-article-database: &article-database
@@ -40,6 +44,8 @@ x-article-service: &article-service
     ArticleDatabases__Oceania: Host=article-db-oceania;Database=articles;Username=postgres;Password=postgres
     ArticleDatabases__SouthAmerica: Host=article-db-south-america;Database=articles;Username=postgres;Password=postgres
     ArticleDatabases__Global: Host=article-db-global;Database=articles;Username=postgres;Password=postgres
+    RabbitMQ__ConnectionString: host=rabbitmq
+  # No depends_on rabbitmq: ArticleService serves HTTP without it, and subscribes when it comes up
   depends_on:
     article-db-africa: { condition: service_healthy }
     article-db-antarctica: { condition: service_healthy }
@@ -68,6 +74,50 @@ services:
       - "3000:3000"
     volumes:
       - monitoring:/data
+
+  # ArticleQueue: RabbitMQ message broker. The web UI shows the queues and the messages in them.
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    hostname: rabbitmq   # RabbitMQ stores its data per host name, so it must stay the same between restarts
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+
+  # Publishes articles: filters profanity, then puts the article on the ArticleQueue
+  publisher-service:
+    build:
+      context: ./src
+      dockerfile: PublisherService/Dockerfile
+    image: happy-headlines/publisher-service:week-39
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      ProfanityService__BaseUrl: http://profanity-service:8080/
+      # publisherConfirms: RabbitMQ confirms it has the message; timeout: give up after 5 s if it doesn't answer
+      RabbitMQ__ConnectionString: host=rabbitmq;publisherConfirms=true;timeout=5
+    ports:
+      - "8085:8080"
+    # Deliberately NOT depending on rabbitmq or profanity-service: if one is down, publishing answers 503
+
+  # Sends newsletters: immediately for every article on the ArticleQueue, and once a day with the latest articles
+  newsletter-service:
+    build:
+      context: ./src
+      dockerfile: NewsletterService/Dockerfile
+    image: happy-headlines/newsletter-service:week-39
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      RabbitMQ__ConnectionString: host=rabbitmq
+      ArticleService__BaseUrl: http://article-load-balancer/
+      Newsletter__DailySendTimeUtc: "06:00"
+    ports:
+      - "8086:8080"
 
   # ArticleDatabase, z-axis split: one database per continent + one for global news
   article-db-africa:
@@ -209,6 +259,7 @@ services:
 
 volumes:
   monitoring:
+  rabbitmq:
   article-db-africa:
   article-db-antarctica:
   article-db-asia:
