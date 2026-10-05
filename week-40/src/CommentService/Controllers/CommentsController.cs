@@ -1,3 +1,4 @@
+using CommentService.Caching;
 using CommentService.Clients;
 using CommentService.Data;
 using CommentService.Models;
@@ -10,16 +11,27 @@ namespace CommentService.Controllers;
 
 [ApiController]
 [Route("api/articles/{articleId:guid}/comments")]
-public class CommentsController(CommentDbContext db, ProfanityClient profanity, ILogger<CommentsController> logger)
-    : ControllerBase
+public class CommentsController(CommentDbContext db, ProfanityClient profanity, CommentCache cache,
+    ILogger<CommentsController> logger) : ControllerBase
 {
     // Reading comments never calls ProfanityService, so it keeps working when ProfanityService is down
     [HttpGet]
-    public async Task<List<Comment>> GetAll(Guid articleId) =>
-        await db.Comments.AsNoTracking()
+    public async Task<List<Comment>> GetAll(Guid articleId)
+    {
+        // Cache miss approach: look in the cache first, and only on a miss read the database and fill the cache
+        var cached = await cache.TryGetAsync(articleId);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var comments = await db.Comments.AsNoTracking()
             .Where(c => c.ArticleId == articleId)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
+        await cache.AddAsync(articleId, comments);
+        return comments;
+    }
 
     [HttpPost]
     public async Task<ActionResult<Comment>> Create(Guid articleId, CommentRequest request,
@@ -53,6 +65,9 @@ public class CommentsController(CommentDbContext db, ProfanityClient profanity, 
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Comment {CommentId} saved on article {ArticleId} (profanity masked: {ContainedProfanity})",
             comment.Id, articleId, filtered.ContainedProfanity);
+
+        // A new comment: the cached list is out of date, so the next read loads it again from the database
+        await cache.RemoveAsync(articleId);
 
         return CreatedAtAction(nameof(GetAll), new { articleId }, comment);
     }

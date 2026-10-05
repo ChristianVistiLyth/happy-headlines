@@ -1,10 +1,13 @@
+using CommentService.Caching;
 using CommentService.Clients;
 using CommentService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http.Resilience;
 using Monitoring;
 using Npgsql;
+using OpenTelemetry.Trace;
 using Polly;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +20,15 @@ var connectionString = builder.Configuration.GetConnectionString("CommentDatabas
 // We don't use Kerberos login; without this the database driver probes for it and logs an error
 var connection = new NpgsqlConnectionStringBuilder(connectionString) { GssEncryptionMode = GssEncryptionMode.Disable };
 builder.Services.AddDbContext<CommentDbContext>(options => options.UseNpgsql(connection.ConnectionString));
+
+// CommentCache (Redis) in front of the comment database
+var cacheOptions = ConfigurationOptions.Parse(builder.Configuration.GetConnectionString("CommentCache")
+    ?? throw new InvalidOperationException("Missing connection string 'CommentCache'"));
+cacheOptions.AbortOnConnectFail = false;           // start even when Redis is down, and reconnect when it is back
+cacheOptions.BacklogPolicy = BacklogPolicy.FailFast; // while Redis is down, fail at once (and use the database)
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(cacheOptions));
+builder.Services.AddSingleton<CommentCache>();
+builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddRedisInstrumentation());   // Redis calls in traces
 
 var profanityServiceUrl = builder.Configuration["ProfanityService:BaseUrl"]
     ?? throw new InvalidOperationException("Missing setting 'ProfanityService:BaseUrl'");

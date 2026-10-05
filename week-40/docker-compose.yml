@@ -218,6 +218,18 @@ services:
       timeout: 3s
       retries: 10
     volumes: [comment-db:/var/lib/postgresql/data]
+
+  # CommentCache: Redis in front of the comment database (Comment swimlane), filled on a cache miss.
+  # Only memory, nothing saved to disk: it is a cache, so after a restart it fills up again by itself.
+  comment-cache:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   comment-service:
     build:
       context: ./src
@@ -228,6 +240,8 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
       OTEL_METRIC_EXPORT_INTERVAL: 5000   # send the cache metrics every 5 s (default 60 s), so the dashboard is live
       ConnectionStrings__CommentDatabase: Host=comment-db;Database=comments;Username=postgres;Password=postgres
+      ConnectionStrings__CommentCache: comment-cache:6379
+      CommentCache__MaxArticles: 30   # the comments of the 30 most recently read articles; then LRU cleans up
       ProfanityService__BaseUrl: http://profanity-service:8080/
     ports:
       - "8082:8080"
