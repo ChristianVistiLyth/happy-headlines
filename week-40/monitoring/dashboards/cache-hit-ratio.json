@@ -2,10 +2,26 @@
   "uid": "cache-hit-ratio",
   "title": "Happy Headlines - Cache hit ratio",
   "description": "Hit ratio of the ArticleCache and the CommentCache: of all reads, how many were answered by the cache.",
-  "tags": ["happy-headlines", "cache"],
+  "tags": [
+    "happy-headlines",
+    "cache"
+  ],
+  "links": [
+    {
+      "title": "Hit vs miss - traces",
+      "tooltip": "Comment reads of Europe's articles (00000004-...): read one twice - the 1st trace is a miss, the 2nd a hit",
+      "type": "link",
+      "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22demo%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22query%22%3A%22%7Bspan.url.path%3D~%5C%22/api/articles/00000004-.%2A/comments%5C%22%7D%22%2C%22limit%22%3A20%2C%22tableType%22%3A%22traces%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-15m%22%2C%22to%22%3A%22now%22%7D%7D%7D",
+      "icon": "external link",
+      "targetBlank": false
+    }
+  ],
   "timezone": "browser",
   "refresh": "5s",
-  "time": { "from": "now-5m", "to": "now" },
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
   "schemaVersion": 39,
   "editable": true,
   "graphTooltip": 1,
@@ -15,12 +31,23 @@
       "type": "stat",
       "title": "ArticleCache - hit ratio",
       "description": "Of all reads of Global articles in the selected time range: the share answered by the cache (hits / all reads).",
-      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(increase(cache_lookups_total{cache=\"article\",result=\"hit\"}[$__range])) / sum(increase(cache_lookups_total{cache=\"article\"}[$__range]))",
           "instant": true
         }
@@ -31,20 +58,37 @@
           "decimals": 0,
           "min": 0,
           "max": 1,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "orange", "value": 0.5 },
-              { "color": "green", "value": 0.8 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "value",
@@ -57,12 +101,23 @@
       "type": "stat",
       "title": "CommentCache - hit ratio",
       "description": "Of all reads of comments in the selected time range: the share answered by the cache (hits / all reads).",
-      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(increase(cache_lookups_total{cache=\"comment\",result=\"hit\"}[$__range])) / sum(increase(cache_lookups_total{cache=\"comment\"}[$__range]))",
           "instant": true
         }
@@ -73,20 +128,37 @@
           "decimals": 0,
           "min": 0,
           "max": 1,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "orange", "value": 0.5 },
-              { "color": "green", "value": 0.8 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "value",
@@ -99,12 +171,23 @@
       "type": "gauge",
       "title": "CommentCache - articles cached (max 30)",
       "description": "How many articles' comments the CommentCache holds right now. It never goes above 30: then LRU removes the least recently used article.",
-      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "max(cache_size{cache=\"comment\"})",
           "instant": true
         }
@@ -115,18 +198,29 @@
           "decimals": 0,
           "min": 0,
           "max": 30,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "showThresholdLabels": false,
         "showThresholdMarkers": false
       }
@@ -136,12 +230,23 @@
       "type": "timeseries",
       "title": "Hit ratio over time",
       "description": "Hits / all reads per cache, over the last minute at each point in time.",
-      "gridPos": { "x": 0, "y": 6, "w": 8, "h": 9 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (cache) (rate(cache_lookups_total{result=\"hit\"}[1m])) / sum by (cache) (rate(cache_lookups_total[1m]))",
           "legendFormat": "{{cache}}"
         }
@@ -151,13 +256,24 @@
           "unit": "percentunit",
           "min": 0,
           "max": 1,
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "showPoints": "never" }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       }
     },
     {
@@ -165,12 +281,23 @@
       "type": "timeseries",
       "title": "Hits and misses per second",
       "description": "How many reads per second were hits and how many were misses, per cache.",
-      "gridPos": { "x": 8, "y": 6, "w": 8, "h": 9 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "x": 8,
+        "y": 6,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (cache, result) (rate(cache_lookups_total[1m]))",
           "legendFormat": "{{cache}} {{result}}"
         }
@@ -179,13 +306,24 @@
         "defaults": {
           "unit": "reqps",
           "min": 0,
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "showPoints": "never" }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       }
     },
     {
@@ -193,12 +331,23 @@
       "type": "timeseries",
       "title": "Average response time - hit vs miss",
       "description": "How long a read takes on average. A miss includes the trip to the database, a hit does not.",
-      "gridPos": { "x": 16, "y": 6, "w": 8, "h": 9 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "x": 16,
+        "y": 6,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (cache, result) (rate(cache_read_duration_seconds_sum[1m])) / sum by (cache, result) (rate(cache_read_duration_seconds_count[1m]))",
           "legendFormat": "{{cache}} {{result}}"
         }
@@ -207,13 +356,24 @@
         "defaults": {
           "unit": "s",
           "min": 0,
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "showPoints": "never" }
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       }
     }
   ]
