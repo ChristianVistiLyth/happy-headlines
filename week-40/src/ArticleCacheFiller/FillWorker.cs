@@ -18,15 +18,50 @@ public class FillWorker(IDbContextFactory<ArticleDbContext> dbFactory, IConnecti
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // TODO (you): the loop - fill, wait, fill again ...
-        throw new NotImplementedException();
+        // Fill once right away, then again every interval
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var wait = interval;
+            try
+            {
+                // A timer has no incoming request, so nothing has started a trace yet. This span becomes the root,
+                // and the database query and the Redis writes of this round hang under it: ONE trace per fill.
+                using var activity = Tracing.Source.StartActivity("fill article cache");
+
+                var articleCount = await FillAsync(stoppingToken);
+                logger.LogInformation("ArticleCache filled with {ArticleCount} articles from the last 14 days", articleCount);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // Database or Redis is down: try again soon. Meanwhile readers simply get misses (from the database).
+                wait = TimeSpan.FromSeconds(30);
+                logger.LogWarning("ArticleCache fill failed, trying again in {Seconds} seconds ({Reason})",
+                    wait.TotalSeconds, e.GetType().Name);
+            }
+
+            await Task.Delay(wait, stoppingToken);
+        }
     }
 
     /// <summary>One fill: reads the Global articles of the last 14 days and writes each one to Redis. Returns how many.</summary>
     private async Task<int> FillAsync(CancellationToken cancellationToken)
     {
-        // TODO (you)
-        throw new NotImplementedException();
+        // The Global articles of the last 14 days
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var since = DateTime.UtcNow.AddDays(-14);
+        var articles = await db.Articles.AsNoTracking()
+            .Where(a => a.PublishedAt >= since)
+            .ToListAsync(cancellationToken);
+
+        var cache = redis.GetDatabase();
+        foreach (var article in articles)
+        {
+            // Each article expires when it turns 14 days old: then Redis removes it by itself
+            var expiresIn = article.PublishedAt.AddDays(14) - DateTime.UtcNow;
+            await cache.StringSetAsync(Key(article.Id), JsonSerializer.Serialize(article), expiresIn);
+        }
+
+        return articles.Count;
     }
 
     // The same key ArticleService reads: "article:{id}"
