@@ -5,7 +5,7 @@
   "description" : "C4 model of the Happy Headlines system.",
   "documentation" : { },
   "id" : 1,
-  "lastModifiedDate" : "2026-10-04T19:26:25Z",
+  "lastModifiedDate" : "2026-10-05T13:20:31Z",
   "model" : {
     "people" : [ {
       "description" : "A person who reads, comments on and subscribes to positive news.",

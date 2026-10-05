@@ -1,7 +1,7 @@
-# Week 39: publishing through the ArticleQueue, with traces that stay whole across services and the queue.
-# PublisherService puts published articles on the ArticleQueue (RabbitMQ); ArticleService stores them,
-# NewsletterService sends an immediate newsletter, and asks ArticleService for the daily newsletter.
-# Swimlanes: Article, Comment, Profanity and Draft each have their own service(s) and database(s).
+# Week 40: caches in front of the far-away databases, and a dashboard with their hit ratio.
+# ArticleCache (Redis) sits between ArticleService and the Global article database, filled by an offline process;
+# CommentCache (Redis) sits between CommentService and the comment database, filled on a cache miss.
+# Swimlanes: Article, Comment, Profanity and Draft each have their own service(s), database(s) and cache.
 # Every service sends its logs and traces to the central monitoring stack (OpenTelemetry → Loki/Tempo → Grafana).
 #
 #   http://localhost:3000          Grafana (logs and traces)
@@ -36,6 +36,7 @@ x-article-service: &article-service
   environment: &article-service-environment
     ASPNETCORE_ENVIRONMENT: Development
     OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+    OTEL_METRIC_EXPORT_INTERVAL: 5000   # send the cache metrics every 5 s (default 60 s), so the dashboard is live
     ArticleDatabases__Africa: Host=article-db-africa;Database=articles;Username=postgres;Password=postgres
     ArticleDatabases__Antarctica: Host=article-db-antarctica;Database=articles;Username=postgres;Password=postgres
     ArticleDatabases__Asia: Host=article-db-asia;Database=articles;Username=postgres;Password=postgres
@@ -45,7 +46,8 @@ x-article-service: &article-service
     ArticleDatabases__SouthAmerica: Host=article-db-south-america;Database=articles;Username=postgres;Password=postgres
     ArticleDatabases__Global: Host=article-db-global;Database=articles;Username=postgres;Password=postgres
     RabbitMQ__ConnectionString: host=rabbitmq
-  # No depends_on rabbitmq: ArticleService serves HTTP without it, and subscribes when it comes up
+    ConnectionStrings__ArticleCache: article-cache:6379
+  # No depends_on rabbitmq or article-cache: ArticleService serves HTTP without them
   depends_on:
     article-db-africa: { condition: service_healthy }
     article-db-antarctica: { condition: service_healthy }
@@ -82,7 +84,9 @@ services:
     ports:
       - "15672:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      # Runs as the rabbitmq user: if the check runs before RabbitMQ has created its Erlang cookie (an internal
+      # password file), the check creates it - and it must belong to RabbitMQ, or RabbitMQ can't start
+      test: ["CMD", "su-exec", "rabbitmq", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -145,6 +149,33 @@ services:
     <<: *article-database
     volumes: [article-db-global:/var/lib/postgresql/data]
 
+  # ArticleCache: Redis in front of the Global database (Article swimlane). Only memory, nothing saved to disk:
+  # it is a cache, so after a restart the ArticleCacheFiller fills it again.
+  article-cache:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # The offline process that fills the ArticleCache with the Global articles of the last 14 days.
+  # It fills once at startup and then every interval, so "docker compose restart article-cache-filler" fills now.
+  article-cache-filler:
+    build:
+      context: ./src
+      dockerfile: ArticleCacheFiller/Dockerfile
+    image: happy-headlines/article-cache-filler:week-40
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      ConnectionStrings__GlobalArticleDatabase: Host=article-db-global;Database=articles;Username=postgres;Password=postgres
+      ConnectionStrings__ArticleCache: article-cache:6379
+      ArticleCacheFiller__Interval: "00:05:00"
+    depends_on:
+      article-db-global: { condition: service_healthy }
+
   # ArticleService, x-axis split: three identical instances
   article-service-1:
     <<: *article-service
@@ -195,6 +226,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      OTEL_METRIC_EXPORT_INTERVAL: 5000   # send the cache metrics every 5 s (default 60 s), so the dashboard is live
       ConnectionStrings__CommentDatabase: Host=comment-db;Database=comments;Username=postgres;Password=postgres
       ProfanityService__BaseUrl: http://profanity-service:8080/
     ports:

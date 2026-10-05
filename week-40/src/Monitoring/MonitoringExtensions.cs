@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,13 +10,14 @@ using OpenTelemetry.Trace;
 namespace Monitoring;
 
 /// <summary>
-/// Central logging and tracing, reused by every service with one line: builder.AddMonitoring().
-/// Logs and traces are sent with OpenTelemetry (OTLP) to the address in OTEL_EXPORTER_OTLP_ENDPOINT,
-/// where the monitoring stack stores them (logs in Loki, traces in Tempo) and Grafana shows them.
+/// Central logging, tracing and metrics, reused by every service with one line: builder.AddMonitoring().
+/// Everything is sent with OpenTelemetry (OTLP) to the address in OTEL_EXPORTER_OTLP_ENDPOINT, where the
+/// monitoring stack stores it (logs in Loki, traces in Tempo, metrics in Prometheus) and Grafana shows it.
 /// </summary>
 public static class MonitoringExtensions
 {
-    public static WebApplicationBuilder AddMonitoring(this WebApplicationBuilder builder)
+    // Works for web services (WebApplicationBuilder) and background workers (HostApplicationBuilder) alike
+    public static TBuilder AddMonitoring<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         // Every log line and trace says which service, and which instance of it, it came from
         var serviceName = builder.Environment.ApplicationName;
@@ -44,6 +44,8 @@ public static class MonitoringExtensions
                 .AddHttpClientInstrumentation()   // outgoing HTTP calls to other services
                 .AddSource("Npgsql")              // database queries
                 .AddSource(Tracing.SourceName))   // our own spans, e.g. publishing to and receiving from the ArticleQueue
+            .WithMetrics(metrics => metrics
+                .AddMeter(CacheMetrics.MeterName)) // cache hits and misses, for the hit-ratio dashboard (Prometheus)
             .UseOtlpExporter();
 
         return builder;

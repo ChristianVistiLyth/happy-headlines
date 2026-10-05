@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/ArticleCacheFiller/ArticleCacheFiller.csproj" />
     <Project Path="src/ArticleService/ArticleService.csproj" />
     <Project Path="src/CommentService/CommentService.csproj" />
     <Project Path="src/DraftService/DraftService.csproj" />

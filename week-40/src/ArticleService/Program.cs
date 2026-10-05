@@ -1,8 +1,11 @@
+using ArticleService.Caching;
 using ArticleService.Controllers;
 using ArticleService.Data;
 using ArticleService.Messaging;
 using EasyNetQ;
 using Monitoring;
+using OpenTelemetry.Trace;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +17,15 @@ var rabbitMq = builder.Configuration["RabbitMQ:ConnectionString"]
     ?? throw new InvalidOperationException("Missing setting 'RabbitMQ:ConnectionString'");
 builder.Services.AddEasyNetQ(rabbitMq).UseSystemTextJson();
 builder.Services.AddHostedService<ArticleQueueSubscriber>();
+
+// ArticleCache (Redis) in front of the Global database
+var cacheOptions = ConfigurationOptions.Parse(builder.Configuration.GetConnectionString("ArticleCache")
+    ?? throw new InvalidOperationException("Missing connection string 'ArticleCache'"));
+cacheOptions.AbortOnConnectFail = false;           // start even when Redis is down, and reconnect when it is back
+cacheOptions.BacklogPolicy = BacklogPolicy.FailFast; // while Redis is down, fail at once (and use the database)
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(cacheOptions));
+builder.Services.AddSingleton<ArticleCache>();
+builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddRedisInstrumentation());   // Redis calls in traces
 
 builder.Services.AddSingleton<ArticleDatabaseRouter>();
 builder.Services.AddControllers();

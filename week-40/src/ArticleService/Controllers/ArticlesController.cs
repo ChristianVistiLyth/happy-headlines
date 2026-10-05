@@ -1,5 +1,6 @@
 using ArticleService.Data;
 using ArticleService.Models;
+using ArticleService.Caching;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +12,7 @@ namespace ArticleService.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/regions/{region:region}/articles")]
-public class ArticlesController(ArticleDatabaseRouter router, ILogger<ArticlesController> logger) : ControllerBase
+public class ArticlesController(ArticleDatabaseRouter router, ArticleCache cache, ILogger<ArticlesController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<Article>>> GetAll(Region region)
@@ -23,6 +24,18 @@ public class ArticlesController(ArticleDatabaseRouter router, ILogger<ArticlesCo
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Article>> Get(Region region, Guid id)
     {
+
+        if(region == Region.Global)
+        {
+            var cached = await cache.TryGetAsync(id);
+
+            if(cached!=null)
+            {
+                return cached;
+            }
+
+        }
+
         await using var db = router.Open(region);
         var article = await db.Articles.FindAsync(id);
         if (article is null)
@@ -58,6 +71,7 @@ public class ArticlesController(ArticleDatabaseRouter router, ILogger<ArticlesCo
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Region region, Guid id, ArticleRequest request)
     {
+
         await using var db = router.Open(region);
         var article = await db.Articles.FindAsync(id);
         if (article is null)
@@ -72,12 +86,18 @@ public class ArticlesController(ArticleDatabaseRouter router, ILogger<ArticlesCo
         await db.SaveChangesAsync();
         logger.LogInformation("Article {ArticleId} updated in {Region}", id, region);
 
+        if (region == Region.Global)
+        {
+            await cache.RemoveAsync(id);   // ensuring we dont have outdated cache
+        }
+
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Region region, Guid id)
     {
+
         await using var db = router.Open(region);
         var deleted = await db.Articles.Where(a => a.Id == id).ExecuteDeleteAsync();
         if (deleted == 0)
@@ -87,6 +107,12 @@ public class ArticlesController(ArticleDatabaseRouter router, ILogger<ArticlesCo
         }
 
         logger.LogInformation("Article {ArticleId} deleted from {Region}", id, region);
+
+        if (region == Region.Global)
+        {
+            await cache.RemoveAsync(id);   // a deleted article must not be in cache
+        }
+
         return NoContent();
     }
 }
