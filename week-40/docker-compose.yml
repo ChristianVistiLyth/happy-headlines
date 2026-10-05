@@ -76,6 +76,9 @@ services:
       - "3000:3000"
     volumes:
       - monitoring:/data
+      # The cache hit-ratio dashboard, loaded into Grafana at startup (http://localhost:3000/d/cache-hit-ratio)
+      - ./monitoring/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/happy-headlines.yaml:ro
+      - ./monitoring/dashboards:/otel-lgtm/happy-headlines-dashboards:ro
 
   # ArticleQueue: RabbitMQ message broker. The web UI shows the queues and the messages in them.
   rabbitmq:
@@ -302,6 +305,15 @@ services:
       - "8084:8080"
     depends_on:
       draft-db: { condition: service_healthy }
+
+  # Demo traffic for the cache dashboard - only started on request:
+  #   docker compose --profile demo up -d traffic      (stop: docker compose stop traffic)
+  traffic:
+    image: curlimages/curl
+    profiles: [demo]
+    entrypoint: ["sh", "/traffic.sh"]
+    volumes:
+      - ./tools/traffic.sh:/traffic.sh:ro
 
 volumes:
   monitoring:

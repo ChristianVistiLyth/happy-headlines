@@ -72,6 +72,9 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// The dashboard shows how many of the CommentCache's places are in use
+CacheMetrics.ObserveSize("comment", app.Services.GetRequiredService<CommentCache>().CountArticles);
+
 // Create the Comments table before taking requests
 using (var scope = app.Services.CreateScope())
 {

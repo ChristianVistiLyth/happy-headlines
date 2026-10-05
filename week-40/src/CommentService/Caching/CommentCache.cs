@@ -105,5 +105,18 @@ public class CommentCache(IConnectionMultiplexer redis, IConfiguration configura
         }
     }
 
+    /// <summary>How many articles' comments are cached right now (for the dashboard), or null if Redis is down.</summary>
+    public long? CountArticles()
+    {
+        try
+        {
+            return redis.GetDatabase().SortedSetLength(LruKey);
+        }
+        catch (Exception e) when (e is RedisException or RedisTimeoutException)
+        {
+            return null;
+        }
+    }
+
     private static string Key(Guid articleId) => $"comments:{articleId}";
 }

@@ -28,4 +28,15 @@ public static class CacheMetrics
         Lookups.Add(1, tags);
         ReadDuration.Record(elapsed.TotalSeconds, tags);
     }
+
+    /// <summary>
+    /// Reports how many items a cache holds right now. OpenTelemetry calls <paramref name="size"/> each time it
+    /// sends metrics; null (e.g. Redis is down) means "no value this time".
+    /// </summary>
+    public static void ObserveSize(string cache, Func<long?> size) =>
+        Meter.CreateObservableGauge("cache.size", () =>
+            size() is { } value
+                ? [new Measurement<long>(value, new KeyValuePair<string, object?>("cache", cache))]
+                : Array.Empty<Measurement<long>>(),
+            description: "How many items the cache holds right now");
 }

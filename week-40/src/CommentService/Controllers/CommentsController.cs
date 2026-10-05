@@ -1,9 +1,11 @@
+using System.Diagnostics;
 using CommentService.Caching;
 using CommentService.Clients;
 using CommentService.Data;
 using CommentService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Monitoring;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
 
@@ -18,10 +20,13 @@ public class CommentsController(CommentDbContext db, ProfanityClient profanity, 
     [HttpGet]
     public async Task<List<Comment>> GetAll(Guid articleId)
     {
+        var timer = Stopwatch.StartNew();   // how long the read takes, for the dashboard
+
         // Cache miss approach: look in the cache first, and only on a miss read the database and fill the cache
         var cached = await cache.TryGetAsync(articleId);
         if (cached is not null)
         {
+            CacheMetrics.Record("comment", hit: true, timer.Elapsed);
             return cached;
         }
 
@@ -30,6 +35,7 @@ public class CommentsController(CommentDbContext db, ProfanityClient profanity, 
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
         await cache.AddAsync(articleId, comments);
+        CacheMetrics.Record("comment", hit: false, timer.Elapsed);   // a miss: the trip to the database is included
         return comments;
     }
 

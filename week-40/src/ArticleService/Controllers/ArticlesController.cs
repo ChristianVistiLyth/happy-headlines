@@ -1,8 +1,10 @@
+using System.Diagnostics;
+using ArticleService.Caching;
 using ArticleService.Data;
 using ArticleService.Models;
-using ArticleService.Caching;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Monitoring;
 
 namespace ArticleService.Controllers;
 
@@ -24,20 +26,25 @@ public class ArticlesController(ArticleDatabaseRouter router, ArticleCache cache
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Article>> Get(Region region, Guid id)
     {
+        var timer = Stopwatch.StartNew();   // how long the read takes, for the dashboard
 
-        if(region == Region.Global)
+        if (region == Region.Global)
         {
             var cached = await cache.TryGetAsync(id);
-
-            if(cached!=null)
+            if (cached is not null)
             {
+                CacheMetrics.Record("article", hit: true, timer.Elapsed);
                 return cached;
             }
-
         }
 
         await using var db = router.Open(region);
         var article = await db.Articles.FindAsync(id);
+        if (region == Region.Global)
+        {
+            CacheMetrics.Record("article", hit: false, timer.Elapsed);   // a miss: the trip to the database is included
+        }
+
         if (article is null)
         {
             logger.LogWarning("Article {ArticleId} not found in {Region}", id, region);
