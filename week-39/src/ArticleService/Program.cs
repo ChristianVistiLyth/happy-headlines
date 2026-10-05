@@ -1,11 +1,19 @@
 using ArticleService.Controllers;
 using ArticleService.Data;
+using ArticleService.Messaging;
+using EasyNetQ;
 using Monitoring;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Central logging and tracing (shared Monitoring library)
 builder.AddMonitoring();
+
+// New articles arrive on the ArticleQueue (RabbitMQ) from PublisherService
+var rabbitMq = builder.Configuration["RabbitMQ:ConnectionString"]
+    ?? throw new InvalidOperationException("Missing setting 'RabbitMQ:ConnectionString'");
+builder.Services.AddEasyNetQ(rabbitMq).UseSystemTextJson();
+builder.Services.AddHostedService<ArticleQueueSubscriber>();
 
 builder.Services.AddSingleton<ArticleDatabaseRouter>();
 builder.Services.AddControllers();
