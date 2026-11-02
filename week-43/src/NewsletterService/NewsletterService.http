@@ -1,0 +1,8 @@
+@baseUrl = http://localhost:8086
+
+### Send the daily newsletter now (normally the daily timer does it at 06:00 UTC).
+# It asks ArticleService for the articles of all eight regions and counts the ones from the last 24 hours.
+POST {{baseUrl}}/api/newsletters/daily
+
+# The immediate newsletter has no endpoint: publish an article with PublisherService.http,
+# and NewsletterService receives it from the ArticleQueue and logs "Immediate newsletter ... sent".

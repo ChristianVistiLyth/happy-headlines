@@ -1,0 +1,22 @@
+@baseUrl = http://localhost:8082
+# Europe's first sample article
+@articleId = 00000004-0000-0000-0000-000000000001
+
+### Post a comment: the prohibited words are masked by ProfanityService
+POST {{baseUrl}}/api/articles/{{articleId}}/comments
+Content-Type: application/json
+
+{
+  "author": "Christian",
+  "content": "What a darn good idea, I love it!"
+}
+
+### Read the comments on the article
+GET {{baseUrl}}/api/articles/{{articleId}}/comments
+
+# Circuit breaker demo:
+# 1. docker compose stop profanity-service
+# 2. Post a comment a few times: 503 every time, and after 3 failures the circuit opens
+#    (see "Circuit OPEN" in: docker compose logs comment-service)
+# 3. Reading the comments still works
+# 4. docker compose start profanity-service, wait 15 seconds, post again: 201 Created

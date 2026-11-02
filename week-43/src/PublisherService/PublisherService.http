@@ -1,0 +1,42 @@
+@baseUrl = http://localhost:8085
+
+### Publish a global article: 202 Accepted, and a moment later ArticleService has stored it
+# @name publish
+POST {{baseUrl}}/api/articles
+Content-Type: application/json
+
+{
+  "title": "Scientists find a darn good way to clean the oceans",
+  "content": "A new floating filter collects plastic without harming fish.",
+  "author": "Christian",
+  "region": "Global"
+}
+
+### The published article, read from ArticleService (through the load balancer). "darn" is masked.
+GET http://localhost:8081/api/regions/global/articles/{{publish.response.body.$.id}}
+
+### Publish to a continent: stored in that region's database
+POST {{baseUrl}}/api/articles
+Content-Type: application/json
+
+{
+  "title": "Copenhagen opens its tenth harbour bath",
+  "content": "Swimming in the city centre is free for everyone.",
+  "author": "Christian",
+  "region": "Europe"
+}
+
+### Unknown region gives 400 Bad Request
+POST {{baseUrl}}/api/articles
+Content-Type: application/json
+
+{
+  "title": "Hello from nowhere",
+  "content": "This region does not exist.",
+  "author": "Christian",
+  "region": "Atlantis"
+}
+
+# Trace demo: publish an article, then in Grafana (http://localhost:3000) open
+# Drilldown -> Traces and pick "POST api/articles": ONE trace with PublisherService, ProfanityService,
+# ArticleService and NewsletterService - the trace context crossed the ArticleQueue inside the message.

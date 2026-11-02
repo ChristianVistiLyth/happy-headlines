@@ -1,0 +1,34 @@
+@baseUrl = http://localhost:8084
+
+### Save a new draft
+# @name create
+POST {{baseUrl}}/api/drafts
+Content-Type: application/json
+
+{
+  "title": "Town opens free summer swimming school",
+  "content": "First draft: the town will open a free swimming school for children this summer.",
+  "author": "Christian"
+}
+
+### Get the draft created above
+GET {{baseUrl}}/api/drafts/{{create.response.body.$.id}}
+
+### Update it
+PUT {{baseUrl}}/api/drafts/{{create.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "title": "Town opens free summer swimming school for all children",
+  "content": "Second draft: more details about the swimming school.",
+  "author": "Christian"
+}
+
+### All drafts by an author (newest first)
+GET {{baseUrl}}/api/drafts?author=Christian
+
+### Delete it
+DELETE {{baseUrl}}/api/drafts/{{create.response.body.$.id}}
+
+### A draft that doesn't exist: 404, and a Warning in the logs
+GET {{baseUrl}}/api/drafts/00000000-0000-0000-0000-000000000000

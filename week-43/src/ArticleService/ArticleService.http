@@ -1,0 +1,40 @@
+# Requests go to the load balancer, which passes each one to one of the three ArticleService instances.
+# Look at the X-Instance response header to see which instance answered.
+@baseUrl = http://localhost:8081
+@region = europe
+
+### List the articles in a region (newest first)
+GET {{baseUrl}}/api/regions/{{region}}/articles
+
+### Get one article (Europe's first sample article)
+GET {{baseUrl}}/api/regions/{{region}}/articles/00000004-0000-0000-0000-000000000001
+
+### Create an article
+# @name create
+POST {{baseUrl}}/api/regions/{{region}}/articles
+Content-Type: application/json
+
+{
+  "title": "Local bakery gives free bread to students",
+  "content": "Every Friday the bakery hands out bread to students in the neighbourhood.",
+  "author": "Christian"
+}
+
+### Update the article created above
+PUT {{baseUrl}}/api/regions/{{region}}/articles/{{create.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "title": "Local bakery gives free bread to all students",
+  "content": "Every Friday the bakery hands out bread to students in the whole city.",
+  "author": "Christian"
+}
+
+### Delete the article created above
+DELETE {{baseUrl}}/api/regions/{{region}}/articles/{{create.response.body.$.id}}
+
+### The same id in another region is not found: each region has its own database
+GET {{baseUrl}}/api/regions/asia/articles/00000004-0000-0000-0000-000000000001
+
+### Unknown region gives 404 Not Found
+GET {{baseUrl}}/api/regions/atlantis/articles
