@@ -1,0 +1,2 @@
+# Shell scripts run inside Linux containers, so they must keep Linux line endings even on Windows
+*.sh text eol=lf

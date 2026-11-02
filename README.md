@@ -3,7 +3,7 @@
 Semester project: a distributed news system that spreads positive news, built one week at a time.
 
 Each `week-XX` folder is a complete, standalone snapshot of the system as it was handed in that week.
-The current week is at the top; earlier weeks are in `Old weeks/`.
+The current week is the last row; earlier weeks are in `Old weeks/`.
 
 How changes are made (issue → branch → pull request): [COLLABORATION.md](COLLABORATION.md).
 
@@ -15,4 +15,5 @@ How changes are made (issue → branch → pull request): [COLLABORATION.md](COL
 | 38 | DraftService, plus central logging and tracing for all services (OpenTelemetry, Grafana) | [week-38](Old%20weeks/week-38) |
 | 39 | Publishing through a queue (RabbitMQ), with traces that stay whole across services | [week-39](Old%20weeks/week-39) |
 | 40 | ArticleCache and CommentCache (Redis), and a cache hit-ratio dashboard (Grafana, Prometheus) | [week-40](Old%20weeks/week-40) |
-| 43 | CI/CD: GitHub Actions builds every service and delivers versioned images to ghcr.io | [week-43](week-43) |
+| 43 | CI/CD: GitHub Actions builds every service and delivers versioned images to ghcr.io | [week-43](Old%20weeks/week-43) |
+| 44 | SubscriberService behind a release toggle, with fault isolation from NewsletterService | [week-44](week-44) |
