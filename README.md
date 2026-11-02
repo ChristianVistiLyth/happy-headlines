@@ -12,4 +12,5 @@ The current week is at the top; earlier weeks are in `Old weeks/`.
 | 37 | CommentService and ProfanityService in separate swimlanes, with a circuit breaker | [week-37](Old%20weeks/week-37) |
 | 38 | DraftService, plus central logging and tracing for all services (OpenTelemetry, Grafana) | [week-38](Old%20weeks/week-38) |
 | 39 | Publishing through a queue (RabbitMQ), with traces that stay whole across services | [week-39](Old%20weeks/week-39) |
-| 40 | ArticleCache and CommentCache (Redis), and a cache hit-ratio dashboard (Grafana, Prometheus) | [week-40](week-40) |
+| 40 | ArticleCache and CommentCache (Redis), and a cache hit-ratio dashboard (Grafana, Prometheus) | [week-40](Old%20weeks/week-40) |
+| 43 | CI/CD: GitHub Actions builds every service and delivers versioned images to ghcr.io | [week-43](week-43) |
