@@ -11,7 +11,7 @@ on:
     branches: [main]
 
 env:
-  WEEK: week-43                                                  # the week folder the pipeline builds
+  WEEK: week-44                                                  # the week folder the pipeline builds
   IMAGE_PREFIX: ghcr.io/christianvistilyth/happy-headlines        # images: <prefix>/<service>:<tag>
 
 jobs:

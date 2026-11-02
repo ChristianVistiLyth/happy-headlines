@@ -1,0 +1,7 @@
+# Grafana loads every dashboard JSON file in this folder when the monitoring container starts
+apiVersion: 1
+providers:
+  - name: "Happy Headlines"
+    type: file
+    options:
+      path: /otel-lgtm/happy-headlines-dashboards

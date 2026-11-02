@@ -1,0 +1,23 @@
+@baseUrl = http://localhost:8083
+
+### Filter a text: prohibited words become asterisks
+POST {{baseUrl}}/api/profanity/filter
+Content-Type: application/json
+
+{
+  "text": "What a darn good day, no heck at all!"
+}
+
+### List the prohibited words
+GET {{baseUrl}}/api/words
+
+### Add a word
+POST {{baseUrl}}/api/words
+Content-Type: application/json
+
+{
+  "text": "gloomy"
+}
+
+### Remove a word
+DELETE {{baseUrl}}/api/words/gloomy
