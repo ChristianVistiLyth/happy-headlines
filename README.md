@@ -5,6 +5,8 @@ Semester project: a distributed news system that spreads positive news, built on
 Each `week-XX` folder is a complete, standalone snapshot of the system as it was handed in that week.
 The current week is at the top; earlier weeks are in `Old weeks/`.
 
+How changes are made (issue → branch → pull request): [COLLABORATION.md](COLLABORATION.md).
+
 | Week | Topic | Folder |
 |------|-------|--------|
 | 35 | C4 diagrams: context and container level | [week-35](Old%20weeks/week-35) |
