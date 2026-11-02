@@ -9,5 +9,6 @@
     <Project Path="src/NewsletterService/NewsletterService.csproj" />
     <Project Path="src/ProfanityService/ProfanityService.csproj" />
     <Project Path="src/PublisherService/PublisherService.csproj" />
+    <Project Path="src/SubscriberService/SubscriberService.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,38 @@
+@baseUrl = http://localhost:8087
+
+### Subscribe to the newsletter
+# @name subscribe
+POST {{baseUrl}}/api/subscribers
+Content-Type: application/json
+
+{
+  "email": "reader@example.com"
+}
+
+### The same address again, with other capitals: 409 Conflict
+POST {{baseUrl}}/api/subscribers
+Content-Type: application/json
+
+{
+  "email": "Reader@Example.com"
+}
+
+### Not an email address: 400 Bad Request
+POST {{baseUrl}}/api/subscribers
+Content-Type: application/json
+
+{
+  "email": "not-an-email"
+}
+
+### All subscribers (what NewsletterService asks for)
+GET {{baseUrl}}/api/subscribers
+
+### The subscriber created above
+GET {{baseUrl}}/api/subscribers/{{subscribe.response.body.$.id}}
+
+### Unsubscribe: 204, the row is deleted
+DELETE {{baseUrl}}/api/subscribers/{{subscribe.response.body.$.id}}
+
+### Unsubscribe again: 404, and a Warning in the logs
+DELETE {{baseUrl}}/api/subscribers/{{subscribe.response.body.$.id}}
