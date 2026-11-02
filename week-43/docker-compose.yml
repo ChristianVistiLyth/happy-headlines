@@ -1,3 +1,4 @@
+# Week 43: a CI/CD pipeline builds every service and delivers versioned images to ghcr.io (see .github/workflows).
 # Week 40: caches in front of the far-away databases, and a dashboard with their hit ratio.
 # ArticleCache (Redis) sits between ArticleService and the Global article database, filled by an offline process;
 # CommentCache (Redis) sits between CommentService and the comment database, filled on a cache miss.
@@ -32,7 +33,7 @@ x-article-service: &article-service
   build:
     context: ./src
     dockerfile: ArticleService/Dockerfile
-  image: happy-headlines/article-service:week-40
+  image: ghcr.io/christianvistilyth/happy-headlines/article-service:latest
   environment: &article-service-environment
     ASPNETCORE_ENVIRONMENT: Development
     OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
@@ -100,7 +101,7 @@ services:
     build:
       context: ./src
       dockerfile: PublisherService/Dockerfile
-    image: happy-headlines/publisher-service:week-40
+    image: ghcr.io/christianvistilyth/happy-headlines/publisher-service:latest
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
@@ -116,7 +117,7 @@ services:
     build:
       context: ./src
       dockerfile: NewsletterService/Dockerfile
-    image: happy-headlines/newsletter-service:week-40
+    image: ghcr.io/christianvistilyth/happy-headlines/newsletter-service:latest
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
@@ -169,7 +170,7 @@ services:
     build:
       context: ./src
       dockerfile: ArticleCacheFiller/Dockerfile
-    image: happy-headlines/article-cache-filler:week-40
+    image: ghcr.io/christianvistilyth/happy-headlines/article-cache-filler:latest
     environment:
       DOTNET_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
@@ -237,7 +238,7 @@ services:
     build:
       context: ./src
       dockerfile: CommentService/Dockerfile
-    image: happy-headlines/comment-service:week-40
+    image: ghcr.io/christianvistilyth/happy-headlines/comment-service:latest
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
@@ -269,7 +270,7 @@ services:
     build:
       context: ./src
       dockerfile: ProfanityService/Dockerfile
-    image: happy-headlines/profanity-service:week-40
+    image: ghcr.io/christianvistilyth/happy-headlines/profanity-service:latest
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
@@ -296,7 +297,7 @@ services:
     build:
       context: ./src
       dockerfile: DraftService/Dockerfile
-    image: happy-headlines/draft-service:week-40
+    image: ghcr.io/christianvistilyth/happy-headlines/draft-service:latest
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
