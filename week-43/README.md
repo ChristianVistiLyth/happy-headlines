@@ -1,54 +1,54 @@
-# Week 39 – Publishing through a queue, with unbroken traces
+# Week 43 – A CI/CD pipeline that builds every service and delivers versioned images
 
-- **PublisherService** checks a new article for profanity (same circuit breaker as comments), puts it on the
-  **ArticleQueue** and answers `202 Accepted` right away – it doesn't wait for anyone.
-- **ArticleQueue** is RabbitMQ (used through EasyNetQ). Every subscribing service gets its own copy of each article:
-  - **ArticleService** stores it in the database of its region. The 3 instances share one queue, so it is stored once.
-  - **NewsletterService** sends an immediate newsletter. Once a day it also asks ArticleService for the articles of the
-    last 24 hours from all regions. (Sending is pretend for now: a log line.)
-- **Traces stay whole across the queue.** HTTP calls get the `traceparent` header automatically, a queue message
-  doesn't. So the trace context is put into the message by hand ([Tracing.cs](src/Monitoring/Tracing.cs)):
-  `Inject` before publishing, `Extract` after receiving.
+- **Every push to `main`** starts the pipeline in GitHub Actions
+  ([.github/workflows/pipeline.yml](../.github/workflows/pipeline.yml)). It compiles the whole solution and then
+  builds a Docker image of each of the 7 services.
+- **The images are delivered to the GitHub Container Registry (ghcr.io)**, a central registry, as
+  `ghcr.io/christianvistilyth/happy-headlines/<service>`. Each image gets three tags:
 
-## How one trace crosses the queue
+  | Tag | Example | Why |
+  |-----|---------|-----|
+  | `1.0.<run number>` | `1.0.7` | a version number that goes up with every delivery |
+  | `sha-<commit>` | `sha-e1f7308` | shows exactly which commit the image was built from |
+  | `latest` | `latest` | always the newest version |
+
+- **A pull request is only checked**: compiled and built, but nothing is delivered. Only `main` delivers.
+- **No secret to set up**: the pipeline logs in to ghcr.io with the `GITHUB_TOKEN` that GitHub gives every run.
+
+## The pipeline
 
 ```mermaid
-%%{init: {"themeVariables": {"actorBkg": "#438dd5", "actorBorder": "#2e6295", "actorTextColor": "#fff", "noteBkgColor": "transparent", "noteBorderColor": "#888"}}}%%
-sequenceDiagram
-    participant W as Webapp
-    participant P as PublisherService
-    participant PR as ProfanityService
-    participant Q as ArticleQueue
-    participant A as ArticleService
-    participant N as NewsletterService
-    W->>P: publish article
-    P->>PR: filter text
-    Note over P,PR: traceparent in the<br/>HTTP header (automatic)
-    PR-->>P: masked text
-    P->>Q: article
-    Note over P,Q: traceparent in the<br/>message (Inject)
-    P-->>W: 202 Accepted
-    Q->>A: article
-    Note over Q,A: Extract → same trace
-    A->>A: store in region DB
-    Q->>N: article
-    Note over Q,N: Extract → same trace
-    N->>N: send newsletter
+%%{init: {"themeVariables": {"lineColor": "#888"}}}%%
+flowchart LR
+    push(["push to main"]) --> build["Compile the solution<br/>dotnet build"]
+    build --> images["Build 7 images<br/>(one parallel job per service)"]
+    images --> registry[("ghcr.io<br/>1.0.N · sha-… · latest")]
+    registry --> run["docker compose pull<br/>runs the delivered images"]
+    classDef step fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef store fill:#1168bd,stroke:#0b4884,color:#fff
+    class push,build,images,run step
+    class registry store
 ```
 
-## Try it
+1. **Compile** – `dotnet build` of [HappyHeadlines.slnx](HappyHeadlines.slnx). If one service doesn't compile,
+   the pipeline stops and no image is made (continuous integration).
+2. **Build and push the images** – a *matrix*: the same steps run once per service, in parallel. A red job shows
+   exactly which service failed, and the others still deliver (continuous delivery).
+3. **Use them** – [docker-compose.yml](docker-compose.yml) names the delivered images, so `docker compose pull`
+   fetches the newest version from ghcr.io. The `build:` sections are kept, so you can still build locally.
 
-Publish an article with [PublisherService.http](src/PublisherService/PublisherService.http), then open Grafana →
-*Drilldown* → *Traces* → `POST api/articles`: **one trace** with PublisherService, ProfanityService, ArticleService
-and NewsletterService.
+The runs are under **Actions** on GitHub; the images are under **Packages** on the GitHub profile.
 
-| What happens when … | Result |
-|---|---|
-| ProfanityService is down | `503`, the article is not published (circuit breaker) |
-| RabbitMQ is down | `503`, the article is not published |
-| all 3 ArticleService instances are down | `202` – the article waits in the queue and is stored when they are back; still one trace |
-| ArticleService can't store an article | the message moves to the error queue (visible in RabbitMQ), nothing is lost |
-| the same article arrives twice | it is stored once |
+## From week 40: ArticleCache and CommentCache
+
+- **ArticleCache** (Redis) holds the Global articles of the last 14 days. ArticleService looks in the cache first
+  and only asks the database on a miss. The **ArticleCacheFiller** is an offline process that fills the cache every
+  5 minutes. An edited or deleted article is removed from the cache right away.
+- **CommentCache** (Redis) holds the comments of the 30 most recently read articles. It is filled on a miss; when a
+  31st article comes in, the least recently used article is removed (our own LRU, a Redis sorted set).
+- If Redis is down, the services read the database instead: the cache is never on the critical path.
+- Hits and misses are counted and sent to Prometheus. The Grafana dashboard **Cache hit ratio** shows the hit
+  ratio per cache and the average response time of a hit and a miss.
 
 ## C4 container diagram
 
@@ -56,13 +56,24 @@ and NewsletterService.
 
 ## Run
 
+The images delivered by the pipeline:
+
+```sh
+docker compose pull
+docker compose up -d
+```
+
+Or build everything locally:
+
 ```sh
 docker compose up -d --build
 ```
 
+Demo traffic for the cache dashboard: `docker compose --profile demo up -d traffic`.
+
 | URL | What |
 |-----|------|
-| http://localhost:3000 | Grafana (logs and traces) |
+| http://localhost:3000 | Grafana (logs, traces and the *Cache hit ratio* dashboard) |
 | http://localhost:15672 | RabbitMQ – the ArticleQueue (guest / guest) |
 | http://localhost:8085/swagger | PublisherService |
 | http://localhost:8086/swagger | NewsletterService |

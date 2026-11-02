@@ -25,10 +25,13 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
                 articleLoadBalancer = container "ArticleLoadBalancer" "Spreads requests across the three ArticleService instances (round-robin)." "" "LoadBalancer"
                 articleService = container "ArticleService" "Responsible for collecting articles for (sub)systems that request them. Runs as 3 identical instances (x-axis split)." "REST API" "Service"
                 articleDatabase = container "ArticleDatabase" "Stores all articles that are published on the website. Split into one database per continent + one global (z-axis split)." "" "Database"
+                articleCache = container "ArticleCache" "Holds the Global articles of the last 14 days, so most reads never reach the database." "Redis" "Cache"
+                articleCacheFiller = container "ArticleCacheFiller" "Offline process: every 5 minutes it loads the Global articles of the last 14 days into ArticleCache." "Worker" "Service"
             }
             group "Comment swimlane" {
                 commentService = container "CommentService" "Responsible for handling comments on articles. Rejects new comments while ProfanityService is unavailable." "REST API" "Service"
                 commentDatabase = container "CommentDatabase" "Stores all comments that are posted on articles." "" "Database"
+                commentCache = container "CommentCache" "Holds the comments of the 30 most recently read articles (least recently used is removed)." "Redis" "Cache"
             }
             group "Draft swimlane" {
                 draftService = container "DraftService" "Responsible for saving drafts of articles." "REST API" "Service"
@@ -74,6 +77,9 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         articleService -> articleQueue "Subscribes to the latest articles in order to persist them"
         articleLoadBalancer -> articleService "Forwards each request to one of the three instances"
         articleService -> articleDatabase "Fetching and storing articles in the database of the article's region"
+        articleService -> articleCache "Reading a Global article first from, removing it when edited or deleted"
+        articleCacheFiller -> articleDatabase "Fetching the Global articles of the last 14 days"
+        articleCacheFiller -> articleCache "Filling with the fetched articles"
 
         // Level 2: Reading & commenting
         reader -> website "Reads and comments on articles, and subscribes to the newsletter using"
@@ -83,6 +89,7 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         commentService -> profanityService "Filtering out profanity (circuit breaker)"
         commentService -> commentDatabase "Storing a comment"
         commentService -> commentDatabase "Fetching comments"
+        commentService -> commentCache "Reading comments first from, filling it on a miss"
 
         // Level 2: Subscribing & newsletter
         website -> subscriberService "Subscribing to the newsletter"
@@ -140,6 +147,9 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             }
             element "Queue" {
                 shape Pipe
+            }
+            element "Cache" {
+                shape Cylinder
             }
         }
     }
