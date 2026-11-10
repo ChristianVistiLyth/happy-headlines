@@ -3,6 +3,7 @@ using EasyNetQ;
 using Messages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.FeatureManagement.Mvc;
 using Monitoring;
 using Npgsql;
 using SubscriberService.Data;
@@ -13,7 +14,10 @@ namespace SubscriberService.Controllers;
 /// <summary>
 /// Subscribe, unsubscribe and list subscribers. Logging policy: an email address is personal data,
 /// so only subscriber ids are logged - never the email address.
+/// Release toggle: while the SubscriberService toggle is OFF, every endpoint here answers 404 - as if the service
+/// didn't exist. FeatureGate checks the toggle on every request, so flipping it takes effect within seconds.
 /// </summary>
+[FeatureGate(Toggles.SubscriberService)]
 [ApiController]
 [Route("api/subscribers")]
 public class SubscribersController(SubscriberDbContext db, IBus bus, ILogger<SubscribersController> logger) : ControllerBase

@@ -1,5 +1,6 @@
 using EasyNetQ;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.FeatureManagement;
 using Monitoring;
 using Npgsql;
 using SubscriberService.Data;
@@ -8,6 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Central logging and tracing (shared Monitoring library)
 builder.AddMonitoring();
+
+// Release toggle: read from the mounted toggles.json and re-read while running, so the toggle can be flipped
+// without any redeploy. Toggles:File points at the file; when it is missing, the toggle counts as OFF.
+builder.Configuration.AddJsonFile(builder.Configuration["Toggles:File"] ?? "toggles.json", optional: true, reloadOnChange: true);
+builder.Services.AddFeatureManagement();
 
 var connectionString = builder.Configuration.GetConnectionString("SubscriberDatabase")
     ?? throw new InvalidOperationException("Missing connection string 'SubscriberDatabase'");

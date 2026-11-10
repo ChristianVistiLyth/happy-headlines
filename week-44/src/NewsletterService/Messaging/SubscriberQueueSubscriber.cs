@@ -1,5 +1,6 @@
 using EasyNetQ;
 using Messages;
+using Microsoft.FeatureManagement;
 using Monitoring;
 using NewsletterService.Newsletters;
 
@@ -9,7 +10,8 @@ namespace NewsletterService.Messaging;
 /// Subscribes to the SubscriberQueue and sends a welcome mail to every new subscriber.
 /// SubscriberService never waits for this: the queue decouples the two swimlanes.
 /// </summary>
-public class SubscriberQueueSubscriber(IBus bus, NewsletterSender sender, ILogger<SubscriberQueueSubscriber> logger)
+public class SubscriberQueueSubscriber(IBus bus, IFeatureManager features, NewsletterSender sender,
+    ILogger<SubscriberQueueSubscriber> logger)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,13 +34,20 @@ public class SubscriberQueueSubscriber(IBus bus, NewsletterSender sender, ILogge
         }
     }
 
-    private Task SendWelcomeAsync(SubscriberSubscribed message, CancellationToken cancellationToken)
+    private async Task SendWelcomeAsync(SubscriberSubscribed message, CancellationToken cancellationToken)
     {
         // Continue SubscriberService's trace: its trace context travelled inside the message
         using var activity = Tracing.StartReceive("receive subscriber", message.Headers);
         activity?.SetTag("subscriber.id", message.SubscriberId);
 
+        // Release toggle point: while SubscriberService isn't released, welcome mails are not sent
+        if (!await features.IsEnabledAsync(Toggles.SubscriberService))
+        {
+            logger.LogInformation("Welcome mail for subscriber {SubscriberId} skipped: SubscriberService not released",
+                message.SubscriberId);
+            return;
+        }
+
         sender.SendWelcome(message.SubscriberId, message.Email);
-        return Task.CompletedTask;
     }
 }

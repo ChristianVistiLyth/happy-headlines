@@ -1,3 +1,4 @@
+using Microsoft.FeatureManagement;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
 
@@ -9,15 +10,28 @@ namespace NewsletterService.Clients;
 /// is down (or the circuit is open) we fall back to the last list we received. A failure in the Subscriber
 /// swimlane therefore never stops a newsletter.
 /// </summary>
-public class SubscriberList(IHttpClientFactory httpClients, ILogger<SubscriberList> logger)
+public class SubscriberList(IHttpClientFactory httpClients, IFeatureManager features, ILogger<SubscriberList> logger)
 {
     public const string HttpClientName = "subscriber-service";
 
     // The last list SubscriberService gave us. Empty until the first successful call.
     private volatile IReadOnlyList<SubscriberContact> _lastKnown = [];
 
-    public async Task<IReadOnlyList<SubscriberContact>> GetAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// The subscribers to send a newsletter to - or null while SubscriberService isn't released.
+    /// </summary>
+    public async Task<IReadOnlyList<SubscriberContact>?> GetAsync(CancellationToken cancellationToken)
     {
+        // RELEASE TOGGLE POINT (Fowler: "if toggle on: new path, else: old path")
+        //   OFF -> the old path from before week 44: don't ask SubscriberService at all, the newsletter is sent
+        //          without a subscriber list. Switched off on purpose is not a failure, so the circuit breaker
+        //          never sees these calls.
+        //   ON  -> the new path below: ask SubscriberService, with fault isolation.
+        if (!await features.IsEnabledAsync(Toggles.SubscriberService))
+        {
+            return null;
+        }
+
         try
         {
             var http = httpClients.CreateClient(HttpClientName);
