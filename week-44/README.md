@@ -1,54 +1,77 @@
-# Week 43 – A CI/CD pipeline that builds every service and delivers versioned images
+# Week 44 – SubscriberService behind a release toggle, with fault isolation
 
-- **Every push to `main`** starts the pipeline in GitHub Actions
-  ([.github/workflows/pipeline.yml](../.github/workflows/pipeline.yml)). It compiles the whole solution and then
-  builds a Docker image of each of the 7 services.
-- **The images are delivered to the GitHub Container Registry (ghcr.io)**, a central registry, as
-  `ghcr.io/christianvistilyth/happy-headlines/<service>`. Each image gets three tags:
+- **SubscriberService** has its own swimlane: its own service, its own PostgreSQL database and the
+  **SubscriberQueue**. Readers subscribe (`POST /api/subscribers`), unsubscribe (`DELETE /api/subscribers/{id}`),
+  and NewsletterService asks for the list (`GET /api/subscribers`).
+- **NewsletterService** has its own swimlane too. It gets a message on the SubscriberQueue (RabbitMQ) for every new
+  subscriber and sends a welcome mail – SubscriberService never waits for it.
+- **Fault isolation.** Before every newsletter, NewsletterService asks SubscriberService for the subscribers
+  through a **circuit breaker** ([Program.cs](src/NewsletterService/Program.cs)). When SubscriberService is down,
+  it uses **the last list it received** ([SubscriberList.cs](src/NewsletterService/Clients/SubscriberList.cs)), so
+  a failure in the Subscriber swimlane never stops a newsletter.
+- **Release toggle.** SubscriberService is deployed, but only *released* while `SubscriberService` is `true` in
+  [toggles/toggles.json](toggles/toggles.json). Both services re-read the file every few seconds, so it is switched
+  on and off **without rebuilding, restarting or redeploying** anything (deploy ≠ release).
 
-  | Tag | Example | Why |
-  |-----|---------|-----|
-  | `1.0.<run number>` | `1.0.7` | a version number that goes up with every delivery |
-  | `sha-<commit>` | `sha-e1f7308` | shows exactly which commit the image was built from |
-  | `latest` | `latest` | always the newest version |
-
-- **A pull request is only checked**: compiled and built, but nothing is delivered. Only `main` delivers.
-- **No secret to set up**: the pipeline logs in to ghcr.io with the `GITHUB_TOKEN` that GitHub gives every run.
-
-## The pipeline
+## The two swimlanes
 
 ```mermaid
 %%{init: {"themeVariables": {"lineColor": "#888"}}}%%
 flowchart LR
-    push(["push to main"]) --> build["Compile the solution<br/>dotnet build"]
-    build --> images["Build 7 images<br/>(one parallel job per service)"]
-    images --> registry[("ghcr.io<br/>1.0.N · sha-… · latest")]
-    registry --> run["docker compose pull<br/>runs the delivered images"]
-    classDef step fill:#438dd5,stroke:#2e6295,color:#fff
-    classDef store fill:#1168bd,stroke:#0b4884,color:#fff
-    class push,build,images,run step
-    class registry store
+    subgraph newsletter [Newsletter swimlane]
+        N["NewsletterService"]
+    end
+    subgraph subscriber [Subscriber swimlane]
+        S["SubscriberService"]
+        DB[("SubscriberDatabase")]
+        Q[["SubscriberQueue"]]
+    end
+    T{{"toggles.json<br/>SubscriberService: true/false"}}
+    S --> DB
+    S -- "new subscriber" --> Q
+    Q -- "welcome mail" --> N
+    N -- "get subscribers<br/>(circuit breaker + last known list)" --> S
+    T -.-> S
+    T -.-> N
+    classDef box fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef toggle fill:#999,stroke:#666,color:#fff
+    class N,S,DB,Q box
+    class T toggle
 ```
 
-1. **Compile** – `dotnet build` of [HappyHeadlines.slnx](HappyHeadlines.slnx). If one service doesn't compile,
-   the pipeline stops and no image is made (continuous integration).
-2. **Build and push the images** – a *matrix*: the same steps run once per service, in parallel. A red job shows
-   exactly which service failed, and the others still deliver (continuous delivery).
-3. **Use them** – [docker-compose.yml](docker-compose.yml) names the delivered images, so `docker compose pull`
-   fetches the newest version from ghcr.io. The `build:` sections are kept, so you can still build locally.
+## The release toggle
 
-The runs are under **Actions** on GitHub; the images are under **Packages** on the GitHub profile.
+```json
+{ "FeatureManagement": { "SubscriberService": true } }
+```
 
-## From week 40: ArticleCache and CommentCache
+| | Toggle **on** | Toggle **off** |
+|---|---|---|
+| SubscriberService | normal answers | `404` on every endpoint, as if it didn't exist (`[FeatureGate]`) |
+| NewsletterService | asks SubscriberService for the subscribers, sends welcome mails | the old path: no subscriber lookup, newsletters are sent without a list, welcome mails are skipped |
 
-- **ArticleCache** (Redis) holds the Global articles of the last 14 days. ArticleService looks in the cache first
-  and only asks the database on a miss. The **ArticleCacheFiller** is an offline process that fills the cache every
-  5 minutes. An edited or deleted article is removed from the cache right away.
-- **CommentCache** (Redis) holds the comments of the 30 most recently read articles. It is filled on a miss; when a
-  31st article comes in, the least recently used article is removed (our own LRU, a Redis sorted set).
-- If Redis is down, the services read the database instead: the cache is never on the critical path.
-- Hits and misses are counted and sent to Prometheus. The Grafana dashboard **Cache hit ratio** shows the hit
-  ratio per cache and the average response time of a hit and a miss.
+The toggle point in NewsletterService is `GetAsync` in [SubscriberList.cs](src/NewsletterService/Clients/SubscriberList.cs).
+Each service re-reads the file on its own, so for a few seconds after a flip the two can disagree. A central
+toggle server (e.g. Unleash or LaunchDarkly) would avoid that.
+
+## What happens when …
+
+| … | Result |
+|---|---|
+| SubscriberService is down | newsletters still go out, to the last known subscribers; after 3 failures the circuit opens and SubscriberService isn't even called for 15 s |
+| SubscriberService is back | the circuit goes half-open → closed, the next newsletter uses the fresh list |
+| RabbitMQ is down when someone subscribes | `201`, the subscriber is saved, a Warning is logged, no welcome mail |
+| an address subscribes twice (any capitals) | `409` |
+| the toggle is switched off | see the table above – within a few seconds, no restart |
+
+## From earlier weeks
+
+- **Week 43 – CI/CD.** Every push to `main` compiles the solution and delivers the 8 service images to ghcr.io as
+  `ghcr.io/christianvistilyth/happy-headlines/<service>`, tagged `1.0.<run number>`, `sha-<commit>` and `latest`
+  ([pipeline.yml](../.github/workflows/pipeline.yml)). Pull requests are only built. Changes reach `main` through
+  issues and pull requests ([COLLABORATION.md](../COLLABORATION.md)).
+- **Week 40 – caches.** ArticleCache (Redis, filled every 5 min by ArticleCacheFiller) and CommentCache (Redis,
+  filled on a miss, LRU of 30 articles); the Grafana dashboard *Cache hit ratio* shows how well they work.
 
 ## C4 container diagram
 
@@ -56,31 +79,23 @@ The runs are under **Actions** on GitHub; the images are under **Packages** on t
 
 ## Run
 
-The images delivered by the pipeline:
-
-```sh
-docker compose pull
-docker compose up -d
-```
-
-Or build everything locally:
-
 ```sh
 docker compose up -d --build
 ```
 
-Demo traffic for the cache dashboard: `docker compose --profile demo up -d traffic`.
+Or the images delivered by the pipeline: `docker compose pull` then `docker compose up -d`.
 
 | URL | What |
 |-----|------|
 | http://localhost:3000 | Grafana (logs, traces and the *Cache hit ratio* dashboard) |
-| http://localhost:15672 | RabbitMQ – the ArticleQueue (guest / guest) |
+| http://localhost:15672 | RabbitMQ – ArticleQueue and SubscriberQueue (guest / guest) |
+| http://localhost:8087/swagger | SubscriberService |
+| http://localhost:8086/swagger | NewsletterService (`POST /api/newsletters/daily` sends the daily newsletter now) |
 | http://localhost:8085/swagger | PublisherService |
-| http://localhost:8086/swagger | NewsletterService |
 | http://localhost:8081/swagger | ArticleService (through the load balancer) |
 | http://localhost:8082/swagger | CommentService |
 | http://localhost:8083/swagger | ProfanityService |
 | http://localhost:8084/swagger | DraftService |
 | http://localhost:8080 | C4 diagrams |
 
-Ready-made requests: [PublisherService.http](src/PublisherService/PublisherService.http), [NewsletterService.http](src/NewsletterService/NewsletterService.http), [ArticleService.http](src/ArticleService/ArticleService.http), [CommentService.http](src/CommentService/CommentService.http), [ProfanityService.http](src/ProfanityService/ProfanityService.http), [DraftService.http](src/DraftService/DraftService.http).
+Ready-made requests: [SubscriberService.http](src/SubscriberService/SubscriberService.http), [NewsletterService.http](src/NewsletterService/NewsletterService.http), [PublisherService.http](src/PublisherService/PublisherService.http), [ArticleService.http](src/ArticleService/ArticleService.http), [CommentService.http](src/CommentService/CommentService.http), [ProfanityService.http](src/ProfanityService/ProfanityService.http), [DraftService.http](src/DraftService/DraftService.http).
