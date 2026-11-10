@@ -16,11 +16,19 @@ namespace ArticleService.Controllers;
 [Route("api/regions/{region:region}/articles")]
 public class ArticlesController(ArticleDatabaseRouter router, ArticleCache cache, ILogger<ArticlesController> logger) : ControllerBase
 {
+    // GAF "Reduce Network Package Size": ?since=<time> sends only the articles published after that time,
+    // so a caller that needs the last 24 hours doesn't download the whole region (the index on PublishedAt helps)
     [HttpGet]
-    public async Task<ActionResult<List<Article>>> GetAll(Region region)
+    public async Task<ActionResult<List<Article>>> GetAll(Region region, DateTime? since)
     {
         await using var db = router.Open(region);
-        return await db.Articles.AsNoTracking().OrderByDescending(a => a.PublishedAt).ToListAsync();
+        var articles = db.Articles.AsNoTracking();
+        if (since is not null)
+        {
+            articles = articles.Where(a => a.PublishedAt > since.Value.ToUniversalTime());
+        }
+
+        return await articles.OrderByDescending(a => a.PublishedAt).ToListAsync();
     }
 
     [HttpGet("{id:guid}")]

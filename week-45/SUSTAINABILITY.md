@@ -17,6 +17,7 @@ are those stand-ins, not joules. The script loads a fixed test set first: 300 ar
 | Tactic | GAF category | Before | After | Saved |
 |---|---|---|---|---|
 | [Reduce Bundle Size](#1-reduce-bundle-size) | Avoid Unnecessary Resources | 1,912 MB (8 images) | 1,039 MB | **46 %** |
+| [Reduce Network Package Size](#2-reduce-network-package-size) | Avoid Unnecessary Resources | 5,395,668 bytes per daily newsletter | 165,830 bytes | **97 %** |
 
 ## 1. Reduce Bundle Size
 
@@ -60,3 +61,66 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
 **Trade-off:** Alpine uses a smaller C library (musl) and runs .NET in *invariant globalization* mode (no
 country-specific number and date formats). Happy Headlines doesn't format anything per culture, and every service
 was tested on the new images: all requests worked and no service logged an error.
+
+## 2. Reduce Network Package Size
+
+*"Every byte transferred costs energy, so avoid transferring unnecessary data."*
+
+**Why here:** the daily newsletter needs the number of articles from the last 24 hours. It asked ArticleService for
+**every** article in all 8 regions – full text included – and then threw almost all of them away on its own side.
+
+**Before** – ArticleService sends the whole region
+([ArticlesController.cs](src/ArticleService/Controllers/ArticlesController.cs)):
+
+```csharp
+[HttpGet]
+public async Task<ActionResult<List<Article>>> GetAll(Region region)
+{
+    await using var db = router.Open(region);
+    return await db.Articles.AsNoTracking().OrderByDescending(a => a.PublishedAt).ToListAsync();
+}
+```
+
+… and NewsletterService filters after the download
+([DailyNewsletter.cs](src/NewsletterService/Newsletters/DailyNewsletter.cs)):
+
+```csharp
+var latest = await articles.GetArticlesAsync(region, cancellationToken);
+articleCount += latest.Count(a => a.PublishedAt >= since);
+```
+
+**After** – the filter moves to where the data is. ArticleService takes `?since=` and only sends newer articles
+(the database index on `PublishedAt` finds them):
+
+```csharp
+// GAF "Reduce Network Package Size": ?since=<time> sends only the articles published after that time,
+// so a caller that needs the last 24 hours doesn't download the whole region (the index on PublishedAt helps)
+[HttpGet]
+public async Task<ActionResult<List<Article>>> GetAll(Region region, DateTime? since)
+{
+    await using var db = router.Open(region);
+    var articles = db.Articles.AsNoTracking();
+    if (since is not null)
+    {
+        articles = articles.Where(a => a.PublishedAt > since.Value.ToUniversalTime());
+    }
+
+    return await articles.OrderByDescending(a => a.PublishedAt).ToListAsync();
+}
+```
+
+```csharp
+var latest = await articles.GetArticlesSinceAsync(region, since, cancellationToken);
+articleCount += latest.Count;
+```
+
+**Result** (one daily newsletter = 8 requests, one per region):
+
+| | Before | After |
+|---|---|---|
+| bytes downloaded | 5,395,668 | 165,830 (−97 %) |
+| articles counted | 89 | 89 – same newsletter |
+
+Less is also read from the 8 databases, serialized to JSON and parsed again, so all three parties – the databases,
+ArticleService and NewsletterService – do less work. The saving grows with the archive: the old request got bigger
+every day, the new one stays at "one day of articles".
