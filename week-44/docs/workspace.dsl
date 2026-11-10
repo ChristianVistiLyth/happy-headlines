@@ -42,17 +42,20 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
                 profanityDatabase = container "ProfanityDatabase" "Stores all profanity words." "" "Database"
             }
 
+            group "Subscriber swimlane" {
+                subscriberService = container "SubscriberService" "Responsible for handling subscribers. Hidden behind a release toggle: switched on and off without redeploying." "REST API" "Service"
+                subscriberDatabase = container "SubscriberDatabase" "Stores all subscribers." "" "Database"
+                subscriberQueue = container "SubscriberQueue" "Queue where subscribers are put in when they subscribe." "" "Queue"
+            }
+            group "Newsletter swimlane" {
+                newsletterService = container "NewsletterService" "Responsible for sending out newsletters to subscribers." "REST API" "Service"
+            }
+
             // Services
             publisherService = container "PublisherService" "Responsible for handling the publishing of articles." "REST API" "Service"
-            subscriberService = container "SubscriberService" "Responsible for handling newsletter subscriptions." "REST API" "Service"
-            newsletterService = container "NewsletterService" "Responsible for sending out newsletters to subscribers." "REST API" "Service"
-
-            // Databases
-            subscriberDatabase = container "SubscriberDatabase" "Stores all newsletter subscribers." "" "Database"
 
             // Queues
             articleQueue = container "ArticleQueue" "Queue where articles are put in when they are published." "" "Queue"
-            subscriberQueue = container "SubscriberQueue" "Queue where new subscribers are put in when they subscribe." "" "Queue"
         }
 
         // External software systems
@@ -92,13 +95,15 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         commentService -> commentCache "Reading comments first from, filling it on a miss"
 
         // Level 2: Subscribing & newsletter
-        website -> subscriberService "Subscribing to the newsletter"
-        subscriberService -> subscriberDatabase "Storing subscribers"
-        subscriberService -> subscriberQueue "Puts new subscribers into"
-        newsletterService -> subscriberQueue "Subscribes to new subscribers"
+        website -> subscriberService "Subscribe to newsletters"
+        website -> subscriberService "Unsubscribe from newsletters"
+        subscriberService -> subscriberDatabase "Storing a subscriber"
+        subscriberService -> subscriberDatabase "Removing a subscriber"
+        subscriberService -> subscriberQueue "When a subscriber subscribes, the subscriber will be put into this queue"
+        newsletterService -> subscriberQueue "Send a welcome mail to new subscribers"
         newsletterService -> articleQueue "Subscribes to receive the latest news first for immediate newsletter"
         newsletterService -> articleLoadBalancer "Request articles for daily newsletter"
-        newsletterService -> subscriberService "Fetching active subscribers"
+        newsletterService -> subscriberService "Sends request to get subscribers (circuit breaker)"
         newsletterService -> emailSystem "Sends newsletters using"
     }
 
