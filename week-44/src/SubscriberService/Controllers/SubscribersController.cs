@@ -1,5 +1,9 @@
+using System.Diagnostics;
+using EasyNetQ;
+using Messages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Monitoring;
 using Npgsql;
 using SubscriberService.Data;
 using SubscriberService.Models;
@@ -12,7 +16,7 @@ namespace SubscriberService.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/subscribers")]
-public class SubscribersController(SubscriberDbContext db, ILogger<SubscribersController> logger) : ControllerBase
+public class SubscribersController(SubscriberDbContext db, IBus bus, ILogger<SubscribersController> logger) : ControllerBase
 {
     // NewsletterService asks for this list before it sends a newsletter
     [HttpGet]
@@ -34,7 +38,7 @@ public class SubscribersController(SubscriberDbContext db, ILogger<SubscribersCo
 
     // An invalid email address never gets here: [ApiController] answers 400 because of [EmailAddress]
     [HttpPost]
-    public async Task<ActionResult<Subscriber>> Subscribe(SubscribeRequest request)
+    public async Task<ActionResult<Subscriber>> Subscribe(SubscribeRequest request, CancellationToken cancellationToken)
     {
         var email = request.Email.Trim().ToLowerInvariant();     // "Ann@Mail.dk" and "ann@mail.dk" are the same reader
         if (await db.Subscribers.AnyAsync(s => s.Email == email))
@@ -58,7 +62,33 @@ public class SubscribersController(SubscriberDbContext db, ILogger<SubscribersCo
         }
 
         logger.LogInformation("Subscriber {SubscriberId} subscribed", subscriber.Id);
+
+        await PublishSubscribedAsync(subscriber, cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = subscriber.Id }, subscriber);
+    }
+
+    /// <summary>
+    /// Puts the new subscriber on the SubscriberQueue, so NewsletterService sends a welcome mail.
+    /// The queue is NOT on the critical path: if RabbitMQ is down, the subscriber is still saved and the reader
+    /// still gets 201 - only the welcome mail is missing.
+    /// </summary>
+    private async Task PublishSubscribedAsync(Subscriber subscriber, CancellationToken cancellationToken)
+    {
+        var message = new SubscriberSubscribed { SubscriberId = subscriber.Id, Email = subscriber.Email };
+        try
+        {
+            using var activity = Tracing.Source.StartActivity("publish subscriber", ActivityKind.Producer);
+            activity?.SetTag("subscriber.id", subscriber.Id);
+
+            // The trace context goes INTO the message, so NewsletterService continues this trace
+            Tracing.Inject(activity, message.Headers);
+            await bus.PubSub.PublishAsync(message, cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning("Subscriber {SubscriberId} saved, but no welcome mail: the SubscriberQueue is unavailable ({Reason})",
+                subscriber.Id, e.GetType().Name);
+        }
     }
 
     // Unsubscribe: the row is deleted, nothing about the reader is kept

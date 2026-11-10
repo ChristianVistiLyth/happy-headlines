@@ -3,8 +3,8 @@ using Monitoring;
 namespace NewsletterService.Newsletters;
 
 /// <summary>
-/// Pretends to send newsletters: there is no SubscriberService or email system yet,
-/// so "sending" is one log line inside a "send newsletter" span.
+/// Pretends to send newsletters and welcome mails: there is no email system yet,
+/// so "sending" is one log line inside a span.
 /// </summary>
 public class NewsletterSender(ILogger<NewsletterSender> logger)
 {
@@ -24,5 +24,14 @@ public class NewsletterSender(ILogger<NewsletterSender> logger)
         activity?.SetTag("article.count", articleCount);
 
         logger.LogInformation("Daily newsletter with {ArticleCount} articles sent", articleCount);
+    }
+
+    // The address would be the mail's recipient; it is personal data, so only the subscriber id is logged
+    public void SendWelcome(Guid subscriberId, string email)
+    {
+        using var activity = Tracing.Source.StartActivity("send welcome mail");
+        activity?.SetTag("subscriber.id", subscriberId);
+
+        logger.LogInformation("Welcome mail sent to subscriber {SubscriberId}", subscriberId);
     }
 }

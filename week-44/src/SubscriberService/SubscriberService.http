@@ -1,6 +1,6 @@
 @baseUrl = http://localhost:8087
 
-### Subscribe to the newsletter
+### Subscribe to the newsletter (NewsletterService then logs "Welcome mail sent to subscriber …")
 # @name subscribe
 POST {{baseUrl}}/api/subscribers
 Content-Type: application/json
