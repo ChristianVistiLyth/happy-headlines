@@ -23,7 +23,15 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             // Swimlanes: each lane has its own service(s) and database(s) and shares nothing with the other lanes
             group "Article swimlane" {
                 articleLoadBalancer = container "ArticleLoadBalancer" "Spreads requests across the three ArticleService instances (round-robin)." "" "LoadBalancer"
-                articleService = container "ArticleService" "Responsible for collecting articles for (sub)systems that request them. Runs as 3 identical instances (x-axis split)." "REST API" "Service"
+                articleService = container "ArticleService" "Responsible for collecting articles for (sub)systems that request them. Runs as 3 identical instances (x-axis split)." "REST API" "Service" {
+                    // Level 3: the components (classes) inside ArticleService
+                    articlesController = component "ArticlesController" "REST endpoints: list articles (one page, or everything since a time), get, create, update and delete one." "ASP.NET Core controller"
+                    articleQueueSubscriber = component "ArticleQueueSubscriber" "Stores every article published on the ArticleQueue in the database of its region." "BackgroundService, EasyNetQ"
+                    articleDatabaseRouter = component "ArticleDatabaseRouter" "The z-axis coordinator: picks the database of the article's region (7 continents + Global)." "C# class"
+                    articleDbContext = component "ArticleDbContext" "Reads and writes the Articles table of one region's database." "Entity Framework Core"
+                    articleCacheClient = component "ArticleCache" "Cache-first reads of Global articles; removes an article from the cache when it is edited or deleted." "C# class, StackExchange.Redis"
+                    cacheMetrics = component "CacheMetrics" "Counts cache hits, misses and read times for the Grafana dashboard." "OpenTelemetry metrics (shared Monitoring library)"
+                }
                 articleDatabase = container "ArticleDatabase" "Stores all articles that are published on the website. Split into one database per continent + one global (z-axis split)." "" "Database"
                 articleCache = container "ArticleCache" "Holds the Global articles of the last 14 days, so most reads never reach the database." "Redis" "Cache"
                 articleCacheFiller = container "ArticleCacheFiller" "Offline process: every 5 minutes it loads the Global articles of the last 14 days into ArticleCache." "Worker" "Service"
@@ -80,6 +88,17 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         articleService -> articleQueue "Subscribes to the latest articles in order to persist them"
         articleLoadBalancer -> articleService "Forwards each request to one of the three instances"
         articleService -> articleDatabase "Fetching and storing articles in the database of the article's region"
+
+        // Level 3: inside ArticleService
+        articleLoadBalancer -> articlesController "Forwards each request to one of the three instances"
+        articlesController -> articleCacheClient "Reading a Global article first from, removing it when edited or deleted"
+        articlesController -> cacheMetrics "Recording each hit or miss"
+        articlesController -> articleDatabaseRouter "Asking for the database of the region in the URL"
+        articleQueueSubscriber -> articleQueue "Subscribes to published articles"
+        articleQueueSubscriber -> articleDatabaseRouter "Asking for the database of the article's region"
+        articleDatabaseRouter -> articleDbContext "Opens one for the chosen region"
+        articleDbContext -> articleDatabase "Reads and writes articles"
+        articleCacheClient -> articleCache "Reads and removes cached articles"
         articleService -> articleCache "Reading a Global article first from, removing it when edited or deleted"
         articleCacheFiller -> articleDatabase "Fetching the Global articles of the last 14 days"
         articleCacheFiller -> articleCache "Filling with the fetched articles"
@@ -114,6 +133,11 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
         }
 
         systemContext happyHeadlines "SystemContext" "Level 1: Who uses Happy Headlines." {
+            include *
+            autoLayout tb
+        }
+
+        component articleService "ArticleServiceComponents" "Level 3: The components inside ArticleService." {
             include *
             autoLayout tb
         }
@@ -155,6 +179,10 @@ workspace "Happy Headlines" "C4 model of the Happy Headlines system." {
             }
             element "Cache" {
                 shape Cylinder
+            }
+            element "Component" {
+                background #85bbf0
+                color #000000
             }
         }
     }
