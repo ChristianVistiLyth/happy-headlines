@@ -8,8 +8,9 @@ COPY Monitoring/ Monitoring/
 COPY ArticleCacheFiller/ ArticleCacheFiller/
 RUN dotnet publish ArticleCacheFiller/ArticleCacheFiller.csproj -c Release -o /app --no-restore
 
-# Runtime stage: the ASP.NET runtime image, because the shared Monitoring library uses ASP.NET Core
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# Runtime stage: the ASP.NET runtime image, because the shared Monitoring library uses ASP.NET Core.
+# GAF "Reduce Bundle Size": Alpine instead of the Debian-based default roughly halves the image.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
 WORKDIR /app
 COPY --from=build /app .
 USER $APP_UID
