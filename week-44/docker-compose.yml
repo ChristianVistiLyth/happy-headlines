@@ -1,8 +1,9 @@
+# Week 44: SubscriberService in its own swimlane (own service and database).
 # Week 43: a CI/CD pipeline builds every service and delivers versioned images to ghcr.io (see .github/workflows).
 # Week 40: caches in front of the far-away databases, and a dashboard with their hit ratio.
 # ArticleCache (Redis) sits between ArticleService and the Global article database, filled by an offline process;
 # CommentCache (Redis) sits between CommentService and the comment database, filled on a cache miss.
-# Swimlanes: Article, Comment, Profanity and Draft each have their own service(s), database(s) and cache.
+# Swimlanes: Article, Comment, Profanity, Draft and Subscriber each have their own service(s), database(s) and cache.
 # Every service sends its logs and traces to the central monitoring stack (OpenTelemetry → Loki/Tempo → Grafana).
 #
 #   http://localhost:3000          Grafana (logs and traces)
@@ -13,6 +14,7 @@
 #   http://localhost:8084/swagger  DraftService
 #   http://localhost:8085/swagger  PublisherService
 #   http://localhost:8086/swagger  NewsletterService
+#   http://localhost:8087/swagger  SubscriberService
 #   http://localhost:15672         RabbitMQ (ArticleQueue) - login guest / guest
 
 # Shared settings for the eight region databases
@@ -307,6 +309,33 @@ services:
     depends_on:
       draft-db: { condition: service_healthy }
 
+  # Subscriber swimlane: its own service and its own database
+  subscriber-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: subscribers
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d subscribers"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes: [subscriber-db:/var/lib/postgresql/data]
+  subscriber-service:
+    build:
+      context: ./src
+      dockerfile: SubscriberService/Dockerfile
+    image: ghcr.io/christianvistilyth/happy-headlines/subscriber-service:latest
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
+      ConnectionStrings__SubscriberDatabase: Host=subscriber-db;Database=subscribers;Username=postgres;Password=postgres
+    ports:
+      - "8087:8080"
+    depends_on:
+      subscriber-db: { condition: service_healthy }
+
   # Demo traffic for the cache dashboard - only started on request:
   #   docker compose --profile demo up -d traffic      (stop: docker compose stop traffic)
   traffic:
@@ -330,3 +359,4 @@ volumes:
   comment-db:
   profanity-db:
   draft-db:
+  subscriber-db:

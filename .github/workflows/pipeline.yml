@@ -45,6 +45,7 @@ jobs:
           - { service: DraftService,       image: draft-service }
           - { service: PublisherService,   image: publisher-service }
           - { service: NewsletterService,  image: newsletter-service }
+          - { service: SubscriberService,  image: subscriber-service }
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
