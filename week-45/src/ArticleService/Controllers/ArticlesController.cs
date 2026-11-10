@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using ArticleService.Caching;
 using ArticleService.Data;
@@ -16,20 +17,29 @@ namespace ArticleService.Controllers;
 [Route("api/regions/{region:region}/articles")]
 public class ArticlesController(ArticleDatabaseRouter router, ArticleCache cache, ILogger<ArticlesController> logger) : ControllerBase
 {
-    // GAF "Reduce Network Package Size": ?since=<time> sends only the articles published after that time,
-    // so a caller that needs the last 24 hours doesn't download the whole region (the index on PublishedAt helps)
+    // Two ways to ask for a list, both so that only what is needed travels over the network:
+    //   ?since=<time>          GAF "Reduce Network Package Size": every article published after that time
+    //                          (the daily newsletter asks for the last 24 hours; the index on PublishedAt finds them)
+    //   ?page=1&pageSize=10    GAF "Defer Fetching": one page of the newest articles; the next page is only
+    //                          fetched if someone asks for it. Without parameters: the 10 newest, as on the website.
     [HttpGet]
-    public async Task<ActionResult<List<Article>>> GetAll(Region region, DateTime? since)
+    public async Task<ActionResult<List<Article>>> GetAll(Region region, DateTime? since,
+        [Range(1, int.MaxValue)] int page = 1, [Range(1, MaxPageSize)] int pageSize = DefaultPageSize)
     {
         await using var db = router.Open(region);
-        var articles = db.Articles.AsNoTracking();
+        var articles = db.Articles.AsNoTracking().OrderByDescending(a => a.PublishedAt);
+
         if (since is not null)
         {
-            articles = articles.Where(a => a.PublishedAt > since.Value.ToUniversalTime());
+            // A time window is already limited by time, so it isn't cut into pages
+            return await articles.Where(a => a.PublishedAt > since.Value.ToUniversalTime()).ToListAsync();
         }
 
-        return await articles.OrderByDescending(a => a.PublishedAt).ToListAsync();
+        return await articles.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
     }
+
+    private const int DefaultPageSize = 10;     // the website shows the ten most recent articles
+    private const int MaxPageSize = 50;         // a bigger page is answered with 400 Bad Request
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Article>> Get(Region region, Guid id)
