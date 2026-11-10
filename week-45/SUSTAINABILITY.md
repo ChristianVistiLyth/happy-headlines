@@ -178,3 +178,19 @@ private const int MaxPageSize = 50;         // a bigger page is answered with 40
 **Trade-off:** a reader who scrolls far back needs several requests instead of one, and `pageSize` is capped at 50
 so a client can't ask for everything at once. Because most readers only look at the newest articles, far fewer
 bytes are sent in total.
+
+## Considered, but not chosen
+
+- **Reduce Logging** (*Accept Lower Fidelity*): keeping, say, only 25 % of the traces would save energy, but
+  monitoring is a requirement of its own ("design to be monitored"), and a missing trace is exactly the one you
+  need when something breaks. A trade-off we chose not to make.
+- **Use Low-footprint Data Formats** (compressing the JSON answers): fewer bytes, but every answer then costs CPU
+  to compress and decompress. After tactics 2 and 3 the answers are already small, so the gain would be small.
+
+## Measure it yourself
+
+```sh
+cd week-45
+docker compose up -d --build
+sh tools/measure.sh
+```

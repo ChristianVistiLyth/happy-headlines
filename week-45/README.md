@@ -1,81 +1,47 @@
-# Week 44 – SubscriberService behind a release toggle, with fault isolation
+# Week 45 – Sustainability: three tactics from the Green Architecture Framework
 
-- **SubscriberService** has its own swimlane: its own service, its own PostgreSQL database and the
-  **SubscriberQueue**. Readers subscribe (`POST /api/subscribers`), unsubscribe (`DELETE /api/subscribers/{id}`),
-  and NewsletterService asks for the list (`GET /api/subscribers`).
-- **NewsletterService** has its own swimlane too. It gets a message on the SubscriberQueue (RabbitMQ) for every new
-  subscriber and sends a welcome mail – SubscriberService never waits for it.
-- **Fault isolation.** Before every newsletter, NewsletterService asks SubscriberService for the subscribers
-  through a **circuit breaker** ([Program.cs](src/NewsletterService/Program.cs)). When SubscriberService is down,
-  it uses **the last list it received** ([SubscriberList.cs](src/NewsletterService/Clients/SubscriberList.cs)), so
-  a failure in the Subscriber swimlane never stops a newsletter.
-- **Release toggle.** SubscriberService is deployed, but only *released* while `SubscriberService` is `true` in
-  [toggles/toggles.json](toggles/toggles.json). Both services re-read the file every few seconds, so it is switched
-  on and off **without rebuilding, restarting or redeploying** anything (deploy ≠ release).
+Three tactics from Bærbak's [Green Architecture Framework (GAF)](https://baerbak.cs.au.dk/papers/gaf.html) that
+Happy Headlines didn't use yet, each measured before and after with [tools/measure.sh](tools/measure.sh).
+Why, the code before and after, and the trade-offs are in **[SUSTAINABILITY.md](SUSTAINABILITY.md)**.
 
-## The two swimlanes
+| GAF tactic | What changed | Before | After |
+|---|---|---|---|
+| **Reduce Bundle Size** | all 8 images run on `aspnet:10.0-alpine` instead of the Debian-based `aspnet:10.0` | 1,912 MB | 1,039 MB (−46 %) |
+| **Reduce Network Package Size** | the daily newsletter asks ArticleService for `?since=<24 hours ago>` instead of every article | 5,395,668 bytes | 165,830 bytes (−97 %) |
+| **Defer Fetching** | the article list returns one page (`?page=&pageSize=`, default 10, max 50) instead of every article | 673,895 bytes | 18,447 bytes (−97 %) |
 
-```mermaid
-%%{init: {"themeVariables": {"lineColor": "#888"}}}%%
-flowchart LR
-    subgraph newsletter [Newsletter swimlane]
-        N["NewsletterService"]
-    end
-    subgraph subscriber [Subscriber swimlane]
-        S["SubscriberService"]
-        DB[("SubscriberDatabase")]
-        Q[["SubscriberQueue"]]
-    end
-    T{{"toggles.json<br/>SubscriberService: true/false"}}
-    S --> DB
-    S -- "new subscriber" --> Q
-    Q -- "welcome mail" --> N
-    N -- "get subscribers<br/>(circuit breaker + last known list)" --> S
-    T -.-> S
-    T -.-> N
-    classDef box fill:#438dd5,stroke:#2e6295,color:#fff
-    classDef toggle fill:#999,stroke:#666,color:#fff
-    class N,S,DB,Q box
-    class T toggle
-```
+Energy can't be measured from inside Docker on Windows, so we measure what drives it: MB per image and bytes per
+request (GAF process tactic *Measure and Experiment*). The test set: 300 articles per region over 30 days.
 
-## The release toggle
+## The article list
 
-```json
-{ "FeatureManagement": { "SubscriberService": true } }
-```
-
-| | Toggle **on** | Toggle **off** |
-|---|---|---|
-| SubscriberService | normal answers | `404` on every endpoint, as if it didn't exist (`[FeatureGate]`) |
-| NewsletterService | asks SubscriberService for the subscribers, sends welcome mails | the old path: no subscriber lookup, newsletters are sent without a list, welcome mails are skipped |
-
-The toggle point in NewsletterService is `GetAsync` in [SubscriberList.cs](src/NewsletterService/Clients/SubscriberList.cs).
-Each service re-reads the file on its own, so for a few seconds after a flip the two can disagree. A central
-toggle server (e.g. Unleash or LaunchDarkly) would avoid that.
-
-## What happens when …
-
-| … | Result |
+| Request | Answer |
 |---|---|
-| SubscriberService is down | newsletters still go out, to the last known subscribers; after 3 failures the circuit opens and SubscriberService isn't even called for 15 s |
-| SubscriberService is back | the circuit goes half-open → closed, the next newsletter uses the fresh list |
-| RabbitMQ is down when someone subscribes | `201`, the subscriber is saved, a Warning is logged, no welcome mail |
-| an address subscribes twice (any capitals) | `409` |
-| the toggle is switched off | see the table above – within a few seconds, no restart |
+| `GET /api/regions/{region}/articles` | the 10 newest articles |
+| `…/articles?page=2` | the next 10 |
+| `…/articles?pageSize=50` | the 50 newest (51 or more → `400`) |
+| `…/articles?since=2026-11-09T06:00:00Z` | every article published after that time (not cut into pages) |
 
 ## From earlier weeks
 
-- **Week 43 – CI/CD.** Every push to `main` compiles the solution and delivers the 8 service images to ghcr.io as
-  `ghcr.io/christianvistilyth/happy-headlines/<service>`, tagged `1.0.<run number>`, `sha-<commit>` and `latest`
-  ([pipeline.yml](../.github/workflows/pipeline.yml)). Pull requests are only built. Changes reach `main` through
-  issues and pull requests ([COLLABORATION.md](../COLLABORATION.md)).
+- **Week 44 – SubscriberService** in its own swimlane, behind a **release toggle** in
+  [toggles/toggles.json](toggles/toggles.json) (on/off without redeploying). NewsletterService gets the subscribers
+  through a **circuit breaker** and falls back to the last known list ([SubscriberList.cs](src/NewsletterService/Clients/SubscriberList.cs)).
+- **Week 43 – CI/CD.** Every push to `main` compiles the solution and delivers the 8 images to ghcr.io, tagged
+  `1.0.<run number>`, `sha-<commit>` and `latest` ([pipeline.yml](../.github/workflows/pipeline.yml)). Changes reach
+  `main` through issues and pull requests ([COLLABORATION.md](../COLLABORATION.md)).
 - **Week 40 – caches.** ArticleCache (Redis, filled every 5 min by ArticleCacheFiller) and CommentCache (Redis,
-  filled on a miss, LRU of 30 articles); the Grafana dashboard *Cache hit ratio* shows how well they work.
+  filled on a miss, LRU of 30 articles), with the Grafana dashboard *Cache hit ratio*.
 
-## C4 container diagram
+## C4 diagrams
+
+Level 2 – containers:
 
 ![Containers](docs/images/c4-level2-containers.png)
+
+Level 3 – the components inside ArticleService:
+
+![ArticleService components](docs/images/c4-level3-articleservice.png)
 
 ## Run
 
@@ -89,13 +55,13 @@ Or the images delivered by the pipeline: `docker compose pull` then `docker comp
 |-----|------|
 | http://localhost:3000 | Grafana (logs, traces and the *Cache hit ratio* dashboard) |
 | http://localhost:15672 | RabbitMQ – ArticleQueue and SubscriberQueue (guest / guest) |
-| http://localhost:8087/swagger | SubscriberService |
-| http://localhost:8086/swagger | NewsletterService (`POST /api/newsletters/daily` sends the daily newsletter now) |
-| http://localhost:8085/swagger | PublisherService |
 | http://localhost:8081/swagger | ArticleService (through the load balancer) |
 | http://localhost:8082/swagger | CommentService |
 | http://localhost:8083/swagger | ProfanityService |
 | http://localhost:8084/swagger | DraftService |
+| http://localhost:8085/swagger | PublisherService |
+| http://localhost:8086/swagger | NewsletterService (`POST /api/newsletters/daily` sends the daily newsletter now) |
+| http://localhost:8087/swagger | SubscriberService |
 | http://localhost:8080 | C4 diagrams |
 
-Ready-made requests: [SubscriberService.http](src/SubscriberService/SubscriberService.http), [NewsletterService.http](src/NewsletterService/NewsletterService.http), [PublisherService.http](src/PublisherService/PublisherService.http), [ArticleService.http](src/ArticleService/ArticleService.http), [CommentService.http](src/CommentService/CommentService.http), [ProfanityService.http](src/ProfanityService/ProfanityService.http), [DraftService.http](src/DraftService/DraftService.http).
+Ready-made requests: [ArticleService.http](src/ArticleService/ArticleService.http), [CommentService.http](src/CommentService/CommentService.http), [ProfanityService.http](src/ProfanityService/ProfanityService.http), [DraftService.http](src/DraftService/DraftService.http), [PublisherService.http](src/PublisherService/PublisherService.http), [NewsletterService.http](src/NewsletterService/NewsletterService.http), [SubscriberService.http](src/SubscriberService/SubscriberService.http).
