@@ -1,0 +1,993 @@
+{
+  "configuration": {
+    "scope": "SoftwareSystem"
+  },
+  "description": "C4 model of the Happy Headlines system.",
+  "documentation": {},
+  "id": 1,
+  "lastModifiedDate": "2026-11-10T10:09:25Z",
+  "model": {
+    "people": [
+      {
+        "description": "A person who reads, comments on and subscribes to positive news.",
+        "id": "1",
+        "name": "Reader",
+        "properties": {
+          "structurizr.dsl.identifier": "reader"
+        },
+        "relationships": [
+          {
+            "description": "Reads and comments on articles, and subscribes to the newsletter using",
+            "destinationId": "3",
+            "id": "26",
+            "sourceId": "1",
+            "tags": "Relationship"
+          },
+          {
+            "description": "Reads and comments on articles, and subscribes to the newsletter using",
+            "destinationId": "5",
+            "id": "43",
+            "sourceId": "1",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      },
+      {
+        "description": "A journalist who writes and publishes articles.",
+        "id": "2",
+        "name": "Publisher",
+        "properties": {
+          "structurizr.dsl.identifier": "publisher"
+        },
+        "relationships": [
+          {
+            "description": "Writes, saves drafts of and publishes articles using",
+            "destinationId": "3",
+            "id": "25",
+            "sourceId": "2",
+            "tags": "Relationship"
+          },
+          {
+            "description": "Writes and publishes articles using",
+            "destinationId": "4",
+            "id": "29",
+            "sourceId": "2",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      }
+    ],
+    "softwareSystems": [
+      {
+        "containers": [
+          {
+            "description": "The webapp where publishers can write and publish articles.",
+            "documentation": {},
+            "id": "4",
+            "name": "Webapp",
+            "properties": {
+              "structurizr.dsl.identifier": "webapp"
+            },
+            "relationships": [
+              {
+                "description": "Saving a draft",
+                "destinationId": "14",
+                "id": "30",
+                "sourceId": "4",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Fetching drafts",
+                "destinationId": "14",
+                "id": "31",
+                "sourceId": "4",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Publishing an article",
+                "destinationId": "22",
+                "id": "33",
+                "sourceId": "4",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,WebBrowser"
+          },
+          {
+            "description": "Shows the ten most recent articles with one focus article in the very top.",
+            "documentation": {},
+            "id": "5",
+            "name": "Website",
+            "properties": {
+              "structurizr.dsl.identifier": "website"
+            },
+            "relationships": [
+              {
+                "description": "Fetching the latest articles",
+                "destinationId": "6",
+                "id": "44",
+                "sourceId": "5",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Posting a comment",
+                "destinationId": "11",
+                "id": "45",
+                "sourceId": "5",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Requesting comments",
+                "destinationId": "11",
+                "id": "46",
+                "sourceId": "5",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Subscribe to newsletters",
+                "destinationId": "18",
+                "id": "51",
+                "sourceId": "5",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Unsubscribe from newsletters",
+                "destinationId": "18",
+                "id": "52",
+                "sourceId": "5",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,WebBrowser"
+          },
+          {
+            "description": "Spreads requests across the three ArticleService instances (round-robin).",
+            "documentation": {},
+            "group": "Article swimlane",
+            "id": "6",
+            "name": "ArticleLoadBalancer",
+            "properties": {
+              "structurizr.dsl.identifier": "articleLoadBalancer"
+            },
+            "relationships": [
+              {
+                "description": "Forwards each request to one of the three instances",
+                "destinationId": "7",
+                "id": "38",
+                "sourceId": "6",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,LoadBalancer"
+          },
+          {
+            "description": "Responsible for collecting articles for (sub)systems that request them. Runs as 3 identical instances (x-axis split).",
+            "documentation": {},
+            "group": "Article swimlane",
+            "id": "7",
+            "name": "ArticleService",
+            "properties": {
+              "structurizr.dsl.identifier": "articleService"
+            },
+            "relationships": [
+              {
+                "description": "Subscribes to the latest articles in order to persist them",
+                "destinationId": "23",
+                "id": "37",
+                "sourceId": "7",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Fetching and storing articles in the database of the article's region",
+                "destinationId": "8",
+                "id": "39",
+                "sourceId": "7",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Reading a Global article first from, removing it when edited or deleted",
+                "destinationId": "9",
+                "id": "40",
+                "sourceId": "7",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "REST API"
+          },
+          {
+            "description": "Stores all articles that are published on the website. Split into one database per continent + one global (z-axis split).",
+            "documentation": {},
+            "group": "Article swimlane",
+            "id": "8",
+            "name": "ArticleDatabase",
+            "properties": {
+              "structurizr.dsl.identifier": "articleDatabase"
+            },
+            "tags": "Element,Container,Database"
+          },
+          {
+            "description": "Holds the Global articles of the last 14 days, so most reads never reach the database.",
+            "documentation": {},
+            "group": "Article swimlane",
+            "id": "9",
+            "name": "ArticleCache",
+            "properties": {
+              "structurizr.dsl.identifier": "articleCache"
+            },
+            "tags": "Element,Container,Cache",
+            "technology": "Redis"
+          },
+          {
+            "description": "Offline process: every 5 minutes it loads the Global articles of the last 14 days into ArticleCache.",
+            "documentation": {},
+            "group": "Article swimlane",
+            "id": "10",
+            "name": "ArticleCacheFiller",
+            "properties": {
+              "structurizr.dsl.identifier": "articleCacheFiller"
+            },
+            "relationships": [
+              {
+                "description": "Fetching the Global articles of the last 14 days",
+                "destinationId": "8",
+                "id": "41",
+                "sourceId": "10",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Filling with the fetched articles",
+                "destinationId": "9",
+                "id": "42",
+                "sourceId": "10",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "Worker"
+          },
+          {
+            "description": "Responsible for handling comments on articles. Rejects new comments while ProfanityService is unavailable.",
+            "documentation": {},
+            "group": "Comment swimlane",
+            "id": "11",
+            "name": "CommentService",
+            "properties": {
+              "structurizr.dsl.identifier": "commentService"
+            },
+            "relationships": [
+              {
+                "description": "Filtering out profanity (circuit breaker)",
+                "destinationId": "16",
+                "id": "47",
+                "sourceId": "11",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Storing a comment",
+                "destinationId": "12",
+                "id": "48",
+                "sourceId": "11",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Fetching comments",
+                "destinationId": "12",
+                "id": "49",
+                "sourceId": "11",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Reading comments first from, filling it on a miss",
+                "destinationId": "13",
+                "id": "50",
+                "sourceId": "11",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "REST API"
+          },
+          {
+            "description": "Stores all comments that are posted on articles.",
+            "documentation": {},
+            "group": "Comment swimlane",
+            "id": "12",
+            "name": "CommentDatabase",
+            "properties": {
+              "structurizr.dsl.identifier": "commentDatabase"
+            },
+            "tags": "Element,Container,Database"
+          },
+          {
+            "description": "Holds the comments of the 30 most recently read articles (least recently used is removed).",
+            "documentation": {},
+            "group": "Comment swimlane",
+            "id": "13",
+            "name": "CommentCache",
+            "properties": {
+              "structurizr.dsl.identifier": "commentCache"
+            },
+            "tags": "Element,Container,Cache",
+            "technology": "Redis"
+          },
+          {
+            "description": "Responsible for saving drafts of articles.",
+            "documentation": {},
+            "group": "Draft swimlane",
+            "id": "14",
+            "name": "DraftService",
+            "properties": {
+              "structurizr.dsl.identifier": "draftService"
+            },
+            "relationships": [
+              {
+                "description": "Storing and fetching drafts",
+                "destinationId": "15",
+                "id": "32",
+                "sourceId": "14",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "REST API"
+          },
+          {
+            "description": "Stores all drafts of articles.",
+            "documentation": {},
+            "group": "Draft swimlane",
+            "id": "15",
+            "name": "DraftDatabase",
+            "properties": {
+              "structurizr.dsl.identifier": "draftDatabase"
+            },
+            "tags": "Element,Container,Database"
+          },
+          {
+            "description": "Responsible for filtering out profanity in articles and comments.",
+            "documentation": {},
+            "group": "Profanity swimlane",
+            "id": "16",
+            "name": "ProfanityService",
+            "properties": {
+              "structurizr.dsl.identifier": "profanityService"
+            },
+            "relationships": [
+              {
+                "description": "Fetching profanity words",
+                "destinationId": "17",
+                "id": "36",
+                "sourceId": "16",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "REST API"
+          },
+          {
+            "description": "Stores all profanity words.",
+            "documentation": {},
+            "group": "Profanity swimlane",
+            "id": "17",
+            "name": "ProfanityDatabase",
+            "properties": {
+              "structurizr.dsl.identifier": "profanityDatabase"
+            },
+            "tags": "Element,Container,Database"
+          },
+          {
+            "description": "Responsible for handling subscribers. Hidden behind a release toggle: switched on and off without redeploying.",
+            "documentation": {},
+            "group": "Subscriber swimlane",
+            "id": "18",
+            "name": "SubscriberService",
+            "properties": {
+              "structurizr.dsl.identifier": "subscriberService"
+            },
+            "relationships": [
+              {
+                "description": "Storing a subscriber",
+                "destinationId": "19",
+                "id": "53",
+                "sourceId": "18",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Removing a subscriber",
+                "destinationId": "19",
+                "id": "54",
+                "sourceId": "18",
+                "tags": "Relationship"
+              },
+              {
+                "description": "When a subscriber subscribes, the subscriber will be put into this queue",
+                "destinationId": "20",
+                "id": "55",
+                "sourceId": "18",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "REST API"
+          },
+          {
+            "description": "Stores all subscribers.",
+            "documentation": {},
+            "group": "Subscriber swimlane",
+            "id": "19",
+            "name": "SubscriberDatabase",
+            "properties": {
+              "structurizr.dsl.identifier": "subscriberDatabase"
+            },
+            "tags": "Element,Container,Database"
+          },
+          {
+            "description": "Queue where subscribers are put in when they subscribe.",
+            "documentation": {},
+            "group": "Subscriber swimlane",
+            "id": "20",
+            "name": "SubscriberQueue",
+            "properties": {
+              "structurizr.dsl.identifier": "subscriberQueue"
+            },
+            "tags": "Element,Container,Queue"
+          },
+          {
+            "description": "Responsible for sending out newsletters to subscribers.",
+            "documentation": {},
+            "group": "Newsletter swimlane",
+            "id": "21",
+            "name": "NewsletterService",
+            "properties": {
+              "structurizr.dsl.identifier": "newsletterService"
+            },
+            "relationships": [
+              {
+                "description": "Send a welcome mail to new subscribers",
+                "destinationId": "20",
+                "id": "56",
+                "sourceId": "21",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Subscribes to receive the latest news first for immediate newsletter",
+                "destinationId": "23",
+                "id": "57",
+                "sourceId": "21",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Request articles for daily newsletter",
+                "destinationId": "6",
+                "id": "58",
+                "sourceId": "21",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Sends request to get subscribers (circuit breaker)",
+                "destinationId": "18",
+                "id": "59",
+                "sourceId": "21",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Sends newsletters using",
+                "destinationId": "24",
+                "id": "60",
+                "sourceId": "21",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "REST API"
+          },
+          {
+            "description": "Responsible for handling the publishing of articles.",
+            "documentation": {},
+            "id": "22",
+            "name": "PublisherService",
+            "properties": {
+              "structurizr.dsl.identifier": "publisherService"
+            },
+            "relationships": [
+              {
+                "description": "Filtering out profanity",
+                "destinationId": "16",
+                "id": "34",
+                "sourceId": "22",
+                "tags": "Relationship"
+              },
+              {
+                "description": "Puts the published article into",
+                "destinationId": "23",
+                "id": "35",
+                "sourceId": "22",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container,Service",
+            "technology": "REST API"
+          },
+          {
+            "description": "Queue where articles are put in when they are published.",
+            "documentation": {},
+            "id": "23",
+            "name": "ArticleQueue",
+            "properties": {
+              "structurizr.dsl.identifier": "articleQueue"
+            },
+            "tags": "Element,Container,Queue"
+          }
+        ],
+        "description": "Lets publishers write and publish positive news, and lets readers read, comment on and subscribe to it.",
+        "documentation": {},
+        "id": "3",
+        "name": "Happy Headlines",
+        "properties": {
+          "structurizr.dsl.identifier": "happyHeadlines"
+        },
+        "relationships": [
+          {
+            "description": "Sends newsletters using",
+            "destinationId": "24",
+            "id": "27",
+            "sourceId": "3",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Software System"
+      },
+      {
+        "description": "Delivers emails to readers.",
+        "documentation": {},
+        "id": "24",
+        "name": "Email System",
+        "properties": {
+          "structurizr.dsl.identifier": "emailSystem"
+        },
+        "relationships": [
+          {
+            "description": "Delivers newsletters to",
+            "destinationId": "1",
+            "id": "28",
+            "sourceId": "24",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      }
+    ]
+  },
+  "name": "Happy Headlines",
+  "properties": {
+    "structurizr.inspection.error": "0",
+    "structurizr.inspection.model.relationship.technology": "ignore",
+    "structurizr.inspection.model.softwaresystem.documentation": "ignore",
+    "structurizr.dsl": "d29ya3NwYWNlICJIYXBweSBIZWFkbGluZXMiICJDNCBtb2RlbCBvZiB0aGUgSGFwcHkgSGVhZGxpbmVzIHN5c3RlbS4iIHsKCiAgICBwcm9wZXJ0aWVzIHsKICAgICAgICAvLyBXZWVrIDM1IGlzIHRlY2hub2xvZ3ktbmV1dHJhbDogdGVjaG5vbG9naWVzIGFyZSBhZGRlZCB3aGVuIHRoZXkgYXJlIGNob3NlbiBpbiBsYXRlciB3ZWVrcwogICAgICAgICJzdHJ1Y3R1cml6ci5pbnNwZWN0aW9uLm1vZGVsLnJlbGF0aW9uc2hpcC50ZWNobm9sb2d5IiAiaWdub3JlIgogICAgICAgICJzdHJ1Y3R1cml6ci5pbnNwZWN0aW9uLm1vZGVsLmNvbnRhaW5lci50ZWNobm9sb2d5IiAiaWdub3JlIgogICAgICAgIC8vIERvY3VtZW50YXRpb24gYW5kIGRlY2lzaW9ucyBsaXZlIGluIHRoZSBSRUFETUUsIG5vdCBpbiBTdHJ1Y3R1cml6cgogICAgICAgICJzdHJ1Y3R1cml6ci5pbnNwZWN0aW9uLm1vZGVsLnNvZnR3YXJlc3lzdGVtLmRvY3VtZW50YXRpb24iICJpZ25vcmUiCiAgICAgICAgInN0cnVjdHVyaXpyLmluc3BlY3Rpb24ubW9kZWwuc29mdHdhcmVzeXN0ZW0uZGVjaXNpb25zIiAiaWdub3JlIgogICAgfQoKICAgIG1vZGVsIHsKICAgICAgICAvLyBQZW9wbGUgKFJlYWRlciBpcyBkZWZpbmVkIGZpcnN0IHNvIGF1dG9MYXlvdXQga2VlcHMgYm90aCBwZW9wbGUgYWJvdmUgdGhlIHN5c3RlbSkKICAgICAgICByZWFkZXIgPSBwZXJzb24gIlJlYWRlciIgIkEgcGVyc29uIHdobyByZWFkcywgY29tbWVudHMgb24gYW5kIHN1YnNjcmliZXMgdG8gcG9zaXRpdmUgbmV3cy4iCiAgICAgICAgcHVibGlzaGVyID0gcGVyc29uICJQdWJsaXNoZXIiICJBIGpvdXJuYWxpc3Qgd2hvIHdyaXRlcyBhbmQgcHVibGlzaGVzIGFydGljbGVzLiIKCiAgICAgICAgLy8gU29mdHdhcmUgc3lzdGVtIHdpdGggaXRzIGNvbnRhaW5lcnMgKExldmVsIDIpCiAgICAgICAgaGFwcHlIZWFkbGluZXMgPSBzb2Z0d2FyZVN5c3RlbSAiSGFwcHkgSGVhZGxpbmVzIiAiTGV0cyBwdWJsaXNoZXJzIHdyaXRlIGFuZCBwdWJsaXNoIHBvc2l0aXZlIG5ld3MsIGFuZCBsZXRzIHJlYWRlcnMgcmVhZCwgY29tbWVudCBvbiBhbmQgc3Vic2NyaWJlIHRvIGl0LiIgewogICAgICAgICAgICAvLyBBcHBzCiAgICAgICAgICAgIHdlYmFwcCA9IGNvbnRhaW5lciAiV2ViYXBwIiAiVGhlIHdlYmFwcCB3aGVyZSBwdWJsaXNoZXJzIGNhbiB3cml0ZSBhbmQgcHVibGlzaCBhcnRpY2xlcy4iICIiICJXZWJCcm93c2VyIgogICAgICAgICAgICB3ZWJzaXRlID0gY29udGFpbmVyICJXZWJzaXRlIiAiU2hvd3MgdGhlIHRlbiBtb3N0IHJlY2VudCBhcnRpY2xlcyB3aXRoIG9uZSBmb2N1cyBhcnRpY2xlIGluIHRoZSB2ZXJ5IHRvcC4iICIiICJXZWJCcm93c2VyIgoKICAgICAgICAgICAgLy8gU3dpbWxhbmVzOiBlYWNoIGxhbmUgaGFzIGl0cyBvd24gc2VydmljZShzKSBhbmQgZGF0YWJhc2UocykgYW5kIHNoYXJlcyBub3RoaW5nIHdpdGggdGhlIG90aGVyIGxhbmVzCiAgICAgICAgICAgIGdyb3VwICJBcnRpY2xlIHN3aW1sYW5lIiB7CiAgICAgICAgICAgICAgICBhcnRpY2xlTG9hZEJhbGFuY2VyID0gY29udGFpbmVyICJBcnRpY2xlTG9hZEJhbGFuY2VyIiAiU3ByZWFkcyByZXF1ZXN0cyBhY3Jvc3MgdGhlIHRocmVlIEFydGljbGVTZXJ2aWNlIGluc3RhbmNlcyAocm91bmQtcm9iaW4pLiIgIiIgIkxvYWRCYWxhbmNlciIKICAgICAgICAgICAgICAgIGFydGljbGVTZXJ2aWNlID0gY29udGFpbmVyICJBcnRpY2xlU2VydmljZSIgIlJlc3BvbnNpYmxlIGZvciBjb2xsZWN0aW5nIGFydGljbGVzIGZvciAoc3ViKXN5c3RlbXMgdGhhdCByZXF1ZXN0IHRoZW0uIFJ1bnMgYXMgMyBpZGVudGljYWwgaW5zdGFuY2VzICh4LWF4aXMgc3BsaXQpLiIgIlJFU1QgQVBJIiAiU2VydmljZSIKICAgICAgICAgICAgICAgIGFydGljbGVEYXRhYmFzZSA9IGNvbnRhaW5lciAiQXJ0aWNsZURhdGFiYXNlIiAiU3RvcmVzIGFsbCBhcnRpY2xlcyB0aGF0IGFyZSBwdWJsaXNoZWQgb24gdGhlIHdlYnNpdGUuIFNwbGl0IGludG8gb25lIGRhdGFiYXNlIHBlciBjb250aW5lbnQgKyBvbmUgZ2xvYmFsICh6LWF4aXMgc3BsaXQpLiIgIiIgIkRhdGFiYXNlIgogICAgICAgICAgICAgICAgYXJ0aWNsZUNhY2hlID0gY29udGFpbmVyICJBcnRpY2xlQ2FjaGUiICJIb2xkcyB0aGUgR2xvYmFsIGFydGljbGVzIG9mIHRoZSBsYXN0IDE0IGRheXMsIHNvIG1vc3QgcmVhZHMgbmV2ZXIgcmVhY2ggdGhlIGRhdGFiYXNlLiIgIlJlZGlzIiAiQ2FjaGUiCiAgICAgICAgICAgICAgICBhcnRpY2xlQ2FjaGVGaWxsZXIgPSBjb250YWluZXIgIkFydGljbGVDYWNoZUZpbGxlciIgIk9mZmxpbmUgcHJvY2VzczogZXZlcnkgNSBtaW51dGVzIGl0IGxvYWRzIHRoZSBHbG9iYWwgYXJ0aWNsZXMgb2YgdGhlIGxhc3QgMTQgZGF5cyBpbnRvIEFydGljbGVDYWNoZS4iICJXb3JrZXIiICJTZXJ2aWNlIgogICAgICAgICAgICB9CiAgICAgICAgICAgIGdyb3VwICJDb21tZW50IHN3aW1sYW5lIiB7CiAgICAgICAgICAgICAgICBjb21tZW50U2VydmljZSA9IGNvbnRhaW5lciAiQ29tbWVudFNlcnZpY2UiICJSZXNwb25zaWJsZSBmb3IgaGFuZGxpbmcgY29tbWVudHMgb24gYXJ0aWNsZXMuIFJlamVjdHMgbmV3IGNvbW1lbnRzIHdoaWxlIFByb2Zhbml0eVNlcnZpY2UgaXMgdW5hdmFpbGFibGUuIiAiUkVTVCBBUEkiICJTZXJ2aWNlIgogICAgICAgICAgICAgICAgY29tbWVudERhdGFiYXNlID0gY29udGFpbmVyICJDb21tZW50RGF0YWJhc2UiICJTdG9yZXMgYWxsIGNvbW1lbnRzIHRoYXQgYXJlIHBvc3RlZCBvbiBhcnRpY2xlcy4iICIiICJEYXRhYmFzZSIKICAgICAgICAgICAgICAgIGNvbW1lbnRDYWNoZSA9IGNvbnRhaW5lciAiQ29tbWVudENhY2hlIiAiSG9sZHMgdGhlIGNvbW1lbnRzIG9mIHRoZSAzMCBtb3N0IHJlY2VudGx5IHJlYWQgYXJ0aWNsZXMgKGxlYXN0IHJlY2VudGx5IHVzZWQgaXMgcmVtb3ZlZCkuIiAiUmVkaXMiICJDYWNoZSIKICAgICAgICAgICAgfQogICAgICAgICAgICBncm91cCAiRHJhZnQgc3dpbWxhbmUiIHsKICAgICAgICAgICAgICAgIGRyYWZ0U2VydmljZSA9IGNvbnRhaW5lciAiRHJhZnRTZXJ2aWNlIiAiUmVzcG9uc2libGUgZm9yIHNhdmluZyBkcmFmdHMgb2YgYXJ0aWNsZXMuIiAiUkVTVCBBUEkiICJTZXJ2aWNlIgogICAgICAgICAgICAgICAgZHJhZnREYXRhYmFzZSA9IGNvbnRhaW5lciAiRHJhZnREYXRhYmFzZSIgIlN0b3JlcyBhbGwgZHJhZnRzIG9mIGFydGljbGVzLiIgIiIgIkRhdGFiYXNlIgogICAgICAgICAgICB9CiAgICAgICAgICAgIGdyb3VwICJQcm9mYW5pdHkgc3dpbWxhbmUiIHsKICAgICAgICAgICAgICAgIHByb2Zhbml0eVNlcnZpY2UgPSBjb250YWluZXIgIlByb2Zhbml0eVNlcnZpY2UiICJSZXNwb25zaWJsZSBmb3IgZmlsdGVyaW5nIG91dCBwcm9mYW5pdHkgaW4gYXJ0aWNsZXMgYW5kIGNvbW1lbnRzLiIgIlJFU1QgQVBJIiAiU2VydmljZSIKICAgICAgICAgICAgICAgIHByb2Zhbml0eURhdGFiYXNlID0gY29udGFpbmVyICJQcm9mYW5pdHlEYXRhYmFzZSIgIlN0b3JlcyBhbGwgcHJvZmFuaXR5IHdvcmRzLiIgIiIgIkRhdGFiYXNlIgogICAgICAgICAgICB9CgogICAgICAgICAgICBncm91cCAiU3Vic2NyaWJlciBzd2ltbGFuZSIgewogICAgICAgICAgICAgICAgc3Vic2NyaWJlclNlcnZpY2UgPSBjb250YWluZXIgIlN1YnNjcmliZXJTZXJ2aWNlIiAiUmVzcG9uc2libGUgZm9yIGhhbmRsaW5nIHN1YnNjcmliZXJzLiBIaWRkZW4gYmVoaW5kIGEgcmVsZWFzZSB0b2dnbGU6IHN3aXRjaGVkIG9uIGFuZCBvZmYgd2l0aG91dCByZWRlcGxveWluZy4iICJSRVNUIEFQSSIgIlNlcnZpY2UiCiAgICAgICAgICAgICAgICBzdWJzY3JpYmVyRGF0YWJhc2UgPSBjb250YWluZXIgIlN1YnNjcmliZXJEYXRhYmFzZSIgIlN0b3JlcyBhbGwgc3Vic2NyaWJlcnMuIiAiIiAiRGF0YWJhc2UiCiAgICAgICAgICAgICAgICBzdWJzY3JpYmVyUXVldWUgPSBjb250YWluZXIgIlN1YnNjcmliZXJRdWV1ZSIgIlF1ZXVlIHdoZXJlIHN1YnNjcmliZXJzIGFyZSBwdXQgaW4gd2hlbiB0aGV5IHN1YnNjcmliZS4iICIiICJRdWV1ZSIKICAgICAgICAgICAgfQogICAgICAgICAgICBncm91cCAiTmV3c2xldHRlciBzd2ltbGFuZSIgewogICAgICAgICAgICAgICAgbmV3c2xldHRlclNlcnZpY2UgPSBjb250YWluZXIgIk5ld3NsZXR0ZXJTZXJ2aWNlIiAiUmVzcG9uc2libGUgZm9yIHNlbmRpbmcgb3V0IG5ld3NsZXR0ZXJzIHRvIHN1YnNjcmliZXJzLiIgIlJFU1QgQVBJIiAiU2VydmljZSIKICAgICAgICAgICAgfQoKICAgICAgICAgICAgLy8gU2VydmljZXMKICAgICAgICAgICAgcHVibGlzaGVyU2VydmljZSA9IGNvbnRhaW5lciAiUHVibGlzaGVyU2VydmljZSIgIlJlc3BvbnNpYmxlIGZvciBoYW5kbGluZyB0aGUgcHVibGlzaGluZyBvZiBhcnRpY2xlcy4iICJSRVNUIEFQSSIgIlNlcnZpY2UiCgogICAgICAgICAgICAvLyBRdWV1ZXMKICAgICAgICAgICAgYXJ0aWNsZVF1ZXVlID0gY29udGFpbmVyICJBcnRpY2xlUXVldWUiICJRdWV1ZSB3aGVyZSBhcnRpY2xlcyBhcmUgcHV0IGluIHdoZW4gdGhleSBhcmUgcHVibGlzaGVkLiIgIiIgIlF1ZXVlIgogICAgICAgIH0KCiAgICAgICAgLy8gRXh0ZXJuYWwgc29mdHdhcmUgc3lzdGVtcwogICAgICAgIGVtYWlsU3lzdGVtID0gc29mdHdhcmVTeXN0ZW0gIkVtYWlsIFN5c3RlbSIgIkRlbGl2ZXJzIGVtYWlscyB0byByZWFkZXJzLiIgIkV4dGVybmFsIgoKICAgICAgICAvLyBMZXZlbCAxOiBTeXN0ZW0gY29udGV4dCByZWxhdGlvbnNoaXBzCiAgICAgICAgLy8gKGRlZmluZWQgZmlyc3QsIHNvIFN0cnVjdHVyaXpyIGRvZXNuJ3QgaW52ZW50IGV4dHJhIGFycm93cyBmcm9tIHRoZSBjb250YWluZXIgcmVsYXRpb25zaGlwcyBiZWxvdykKICAgICAgICBwdWJsaXNoZXIgLT4gaGFwcHlIZWFkbGluZXMgIldyaXRlcywgc2F2ZXMgZHJhZnRzIG9mIGFuZCBwdWJsaXNoZXMgYXJ0aWNsZXMgdXNpbmciCiAgICAgICAgcmVhZGVyIC0+IGhhcHB5SGVhZGxpbmVzICJSZWFkcyBhbmQgY29tbWVudHMgb24gYXJ0aWNsZXMsIGFuZCBzdWJzY3JpYmVzIHRvIHRoZSBuZXdzbGV0dGVyIHVzaW5nIgogICAgICAgIGhhcHB5SGVhZGxpbmVzIC0+IGVtYWlsU3lzdGVtICJTZW5kcyBuZXdzbGV0dGVycyB1c2luZyIKICAgICAgICBlbWFpbFN5c3RlbSAtPiByZWFkZXIgIkRlbGl2ZXJzIG5ld3NsZXR0ZXJzIHRvIgoKICAgICAgICAvLyBMZXZlbCAyOiBEcmFmdGluZyAmIHB1Ymxpc2hpbmcKICAgICAgICBwdWJsaXNoZXIgLT4gd2ViYXBwICJXcml0ZXMgYW5kIHB1Ymxpc2hlcyBhcnRpY2xlcyB1c2luZyIKICAgICAgICB3ZWJhcHAgLT4gZHJhZnRTZXJ2aWNlICJTYXZpbmcgYSBkcmFmdCIKICAgICAgICB3ZWJhcHAgLT4gZHJhZnRTZXJ2aWNlICJGZXRjaGluZyBkcmFmdHMiCiAgICAgICAgZHJhZnRTZXJ2aWNlIC0+IGRyYWZ0RGF0YWJhc2UgIlN0b3JpbmcgYW5kIGZldGNoaW5nIGRyYWZ0cyIKICAgICAgICB3ZWJhcHAgLT4gcHVibGlzaGVyU2VydmljZSAiUHVibGlzaGluZyBhbiBhcnRpY2xlIgogICAgICAgIHB1Ymxpc2hlclNlcnZpY2UgLT4gcHJvZmFuaXR5U2VydmljZSAiRmlsdGVyaW5nIG91dCBwcm9mYW5pdHkiCiAgICAgICAgcHVibGlzaGVyU2VydmljZSAtPiBhcnRpY2xlUXVldWUgIlB1dHMgdGhlIHB1Ymxpc2hlZCBhcnRpY2xlIGludG8iCiAgICAgICAgcHJvZmFuaXR5U2VydmljZSAtPiBwcm9mYW5pdHlEYXRhYmFzZSAiRmV0Y2hpbmcgcHJvZmFuaXR5IHdvcmRzIgogICAgICAgIGFydGljbGVTZXJ2aWNlIC0+IGFydGljbGVRdWV1ZSAiU3Vic2NyaWJlcyB0byB0aGUgbGF0ZXN0IGFydGljbGVzIGluIG9yZGVyIHRvIHBlcnNpc3QgdGhlbSIKICAgICAgICBhcnRpY2xlTG9hZEJhbGFuY2VyIC0+IGFydGljbGVTZXJ2aWNlICJGb3J3YXJkcyBlYWNoIHJlcXVlc3QgdG8gb25lIG9mIHRoZSB0aHJlZSBpbnN0YW5jZXMiCiAgICAgICAgYXJ0aWNsZVNlcnZpY2UgLT4gYXJ0aWNsZURhdGFiYXNlICJGZXRjaGluZyBhbmQgc3RvcmluZyBhcnRpY2xlcyBpbiB0aGUgZGF0YWJhc2Ugb2YgdGhlIGFydGljbGUncyByZWdpb24iCiAgICAgICAgYXJ0aWNsZVNlcnZpY2UgLT4gYXJ0aWNsZUNhY2hlICJSZWFkaW5nIGEgR2xvYmFsIGFydGljbGUgZmlyc3QgZnJvbSwgcmVtb3ZpbmcgaXQgd2hlbiBlZGl0ZWQgb3IgZGVsZXRlZCIKICAgICAgICBhcnRpY2xlQ2FjaGVGaWxsZXIgLT4gYXJ0aWNsZURhdGFiYXNlICJGZXRjaGluZyB0aGUgR2xvYmFsIGFydGljbGVzIG9mIHRoZSBsYXN0IDE0IGRheXMiCiAgICAgICAgYXJ0aWNsZUNhY2hlRmlsbGVyIC0+IGFydGljbGVDYWNoZSAiRmlsbGluZyB3aXRoIHRoZSBmZXRjaGVkIGFydGljbGVzIgoKICAgICAgICAvLyBMZXZlbCAyOiBSZWFkaW5nICYgY29tbWVudGluZwogICAgICAgIHJlYWRlciAtPiB3ZWJzaXRlICJSZWFkcyBhbmQgY29tbWVudHMgb24gYXJ0aWNsZXMsIGFuZCBzdWJzY3JpYmVzIHRvIHRoZSBuZXdzbGV0dGVyIHVzaW5nIgogICAgICAgIHdlYnNpdGUgLT4gYXJ0aWNsZUxvYWRCYWxhbmNlciAiRmV0Y2hpbmcgdGhlIGxhdGVzdCBhcnRpY2xlcyIKICAgICAgICB3ZWJzaXRlIC0+IGNvbW1lbnRTZXJ2aWNlICJQb3N0aW5nIGEgY29tbWVudCIKICAgICAgICB3ZWJzaXRlIC0+IGNvbW1lbnRTZXJ2aWNlICJSZXF1ZXN0aW5nIGNvbW1lbnRzIgogICAgICAgIGNvbW1lbnRTZXJ2aWNlIC0+IHByb2Zhbml0eVNlcnZpY2UgIkZpbHRlcmluZyBvdXQgcHJvZmFuaXR5IChjaXJjdWl0IGJyZWFrZXIpIgogICAgICAgIGNvbW1lbnRTZXJ2aWNlIC0+IGNvbW1lbnREYXRhYmFzZSAiU3RvcmluZyBhIGNvbW1lbnQiCiAgICAgICAgY29tbWVudFNlcnZpY2UgLT4gY29tbWVudERhdGFiYXNlICJGZXRjaGluZyBjb21tZW50cyIKICAgICAgICBjb21tZW50U2VydmljZSAtPiBjb21tZW50Q2FjaGUgIlJlYWRpbmcgY29tbWVudHMgZmlyc3QgZnJvbSwgZmlsbGluZyBpdCBvbiBhIG1pc3MiCgogICAgICAgIC8vIExldmVsIDI6IFN1YnNjcmliaW5nICYgbmV3c2xldHRlcgogICAgICAgIHdlYnNpdGUgLT4gc3Vic2NyaWJlclNlcnZpY2UgIlN1YnNjcmliZSB0byBuZXdzbGV0dGVycyIKICAgICAgICB3ZWJzaXRlIC0+IHN1YnNjcmliZXJTZXJ2aWNlICJVbnN1YnNjcmliZSBmcm9tIG5ld3NsZXR0ZXJzIgogICAgICAgIHN1YnNjcmliZXJTZXJ2aWNlIC0+IHN1YnNjcmliZXJEYXRhYmFzZSAiU3RvcmluZyBhIHN1YnNjcmliZXIiCiAgICAgICAgc3Vic2NyaWJlclNlcnZpY2UgLT4gc3Vic2NyaWJlckRhdGFiYXNlICJSZW1vdmluZyBhIHN1YnNjcmliZXIiCiAgICAgICAgc3Vic2NyaWJlclNlcnZpY2UgLT4gc3Vic2NyaWJlclF1ZXVlICJXaGVuIGEgc3Vic2NyaWJlciBzdWJzY3JpYmVzLCB0aGUgc3Vic2NyaWJlciB3aWxsIGJlIHB1dCBpbnRvIHRoaXMgcXVldWUiCiAgICAgICAgbmV3c2xldHRlclNlcnZpY2UgLT4gc3Vic2NyaWJlclF1ZXVlICJTZW5kIGEgd2VsY29tZSBtYWlsIHRvIG5ldyBzdWJzY3JpYmVycyIKICAgICAgICBuZXdzbGV0dGVyU2VydmljZSAtPiBhcnRpY2xlUXVldWUgIlN1YnNjcmliZXMgdG8gcmVjZWl2ZSB0aGUgbGF0ZXN0IG5ld3MgZmlyc3QgZm9yIGltbWVkaWF0ZSBuZXdzbGV0dGVyIgogICAgICAgIG5ld3NsZXR0ZXJTZXJ2aWNlIC0+IGFydGljbGVMb2FkQmFsYW5jZXIgIlJlcXVlc3QgYXJ0aWNsZXMgZm9yIGRhaWx5IG5ld3NsZXR0ZXIiCiAgICAgICAgbmV3c2xldHRlclNlcnZpY2UgLT4gc3Vic2NyaWJlclNlcnZpY2UgIlNlbmRzIHJlcXVlc3QgdG8gZ2V0IHN1YnNjcmliZXJzIChjaXJjdWl0IGJyZWFrZXIpIgogICAgICAgIG5ld3NsZXR0ZXJTZXJ2aWNlIC0+IGVtYWlsU3lzdGVtICJTZW5kcyBuZXdzbGV0dGVycyB1c2luZyIKICAgIH0KCiAgICB2aWV3cyB7CiAgICAgICAgcHJvcGVydGllcyB7CiAgICAgICAgICAgIC8vIEhpZGUgdGhlIHRpbWVzdGFtcCB1bmRlciBlYWNoIGRpYWdyYW0KICAgICAgICAgICAgInN0cnVjdHVyaXpyLm1ldGFkYXRhIiAiZmFsc2UiCiAgICAgICAgfQoKICAgICAgICBzeXN0ZW1Db250ZXh0IGhhcHB5SGVhZGxpbmVzICJTeXN0ZW1Db250ZXh0IiAiTGV2ZWwgMTogV2hvIHVzZXMgSGFwcHkgSGVhZGxpbmVzLiIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dCB0YgogICAgICAgIH0KCiAgICAgICAgLy8gTWFudWFsIGxheW91dDogYm94IHBvc2l0aW9ucyBhcmUgc3RvcmVkIGluIHdvcmtzcGFjZS5qc29uCiAgICAgICAgY29udGFpbmVyIGhhcHB5SGVhZGxpbmVzICJDb250YWluZXJzIiAiTGV2ZWwgMjogQWxsIGNvbnRhaW5lcnMgaW4gSGFwcHkgSGVhZGxpbmVzLiIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICB9CgogICAgICAgIC8vIFN0YW5kYXJkIEM0IGNvbG91cnMKICAgICAgICBzdHlsZXMgewogICAgICAgICAgICBlbGVtZW50ICJFbGVtZW50IiB7CiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiUGVyc29uIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICMwODQyN2IKICAgICAgICAgICAgICAgIHNoYXBlIHBlcnNvbgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIlNvZnR3YXJlIFN5c3RlbSIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMTE2OGJkCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQ29udGFpbmVyIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICM0MzhkZDUKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJFeHRlcm5hbCIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjOTk5OTk5CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiV2ViQnJvd3NlciIgewogICAgICAgICAgICAgICAgc2hhcGUgV2ViQnJvd3NlcgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIlNlcnZpY2UiIHsKICAgICAgICAgICAgICAgIHNoYXBlIEhleGFnb24KICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJEYXRhYmFzZSIgewogICAgICAgICAgICAgICAgc2hhcGUgQ3lsaW5kZXIKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJRdWV1ZSIgewogICAgICAgICAgICAgICAgc2hhcGUgUGlwZQogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkNhY2hlIiB7CiAgICAgICAgICAgICAgICBzaGFwZSBDeWxpbmRlcgogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQoKICAgIGNvbmZpZ3VyYXRpb24gewogICAgICAgIHNjb3BlIHNvZnR3YXJlc3lzdGVtCiAgICB9Cn0=",
+    "structurizr.inspection.model.container.technology": "ignore",
+    "structurizr.inspection.model.softwaresystem.decisions": "ignore",
+    "structurizr.inspection.info": "0",
+    "structurizr.inspection.ignore": "48",
+    "structurizr.inspection.warning": "0"
+  },
+  "views": {
+    "configuration": {
+      "properties": {
+        "structurizr.metadata": "false"
+      },
+      "styles": {
+        "elements": [
+          {
+            "shape": "Cylinder",
+            "tag": "Cache"
+          },
+          {
+            "background": "#438dd5",
+            "tag": "Container"
+          },
+          {
+            "shape": "Cylinder",
+            "tag": "Database"
+          },
+          {
+            "color": "#ffffff",
+            "tag": "Element"
+          },
+          {
+            "background": "#999999",
+            "tag": "External"
+          },
+          {
+            "background": "#08427b",
+            "shape": "Person",
+            "tag": "Person"
+          },
+          {
+            "shape": "Pipe",
+            "tag": "Queue"
+          },
+          {
+            "shape": "Hexagon",
+            "tag": "Service"
+          },
+          {
+            "background": "#1168bd",
+            "tag": "Software System"
+          },
+          {
+            "shape": "WebBrowser",
+            "tag": "WebBrowser"
+          }
+        ]
+      },
+      "terminology": {}
+    },
+    "containerViews": [
+      {
+        "description": "Level 2: All containers in Happy Headlines.",
+        "dimensions": {
+          "height": 3950,
+          "width": 7050
+        },
+        "elements": [
+          {
+            "id": "1",
+            "x": 3525,
+            "y": 150
+          },
+          {
+            "id": "2",
+            "x": 600,
+            "y": 150
+          },
+          {
+            "id": "4",
+            "x": 575,
+            "y": 750
+          },
+          {
+            "id": "5",
+            "x": 3500,
+            "y": 750
+          },
+          {
+            "id": "6",
+            "x": 3500,
+            "y": 1300
+          },
+          {
+            "id": "7",
+            "x": 3500,
+            "y": 1850
+          },
+          {
+            "id": "8",
+            "x": 3500,
+            "y": 3150
+          },
+          {
+            "id": "9",
+            "x": 4150,
+            "y": 2500
+          },
+          {
+            "id": "10",
+            "x": 4150,
+            "y": 3150
+          },
+          {
+            "id": "11",
+            "x": 2200,
+            "y": 1850
+          },
+          {
+            "id": "12",
+            "x": 2200,
+            "y": 3150
+          },
+          {
+            "id": "13",
+            "x": 2850,
+            "y": 2500
+          },
+          {
+            "id": "14",
+            "x": 250,
+            "y": 1850
+          },
+          {
+            "id": "15",
+            "x": 250,
+            "y": 3150
+          },
+          {
+            "id": "16",
+            "x": 1550,
+            "y": 2500
+          },
+          {
+            "id": "17",
+            "x": 1550,
+            "y": 3150
+          },
+          {
+            "id": "18",
+            "x": 5800,
+            "y": 1850
+          },
+          {
+            "id": "19",
+            "x": 5800,
+            "y": 3150
+          },
+          {
+            "id": "20",
+            "x": 5500,
+            "y": 2500
+          },
+          {
+            "id": "21",
+            "x": 4900,
+            "y": 1850
+          },
+          {
+            "id": "22",
+            "x": 900,
+            "y": 1850
+          },
+          {
+            "id": "23",
+            "x": 4700,
+            "y": 2500
+          },
+          {
+            "id": "24",
+            "x": 6350,
+            "y": 150
+          }
+        ],
+        "externalSoftwareSystemBoundariesVisible": false,
+        "key": "Containers",
+        "name": "Container View: Happy Headlines",
+        "order": 2,
+        "relationships": [
+          {
+            "id": "28"
+          },
+          {
+            "id": "29"
+          },
+          {
+            "id": "30",
+            "vertices": [
+              {
+                "x": 505,
+                "y": 1450
+              }
+            ]
+          },
+          {
+            "id": "31",
+            "vertices": [
+              {
+                "x": 755,
+                "y": 1450
+              }
+            ]
+          },
+          {
+            "id": "32"
+          },
+          {
+            "id": "33"
+          },
+          {
+            "id": "34"
+          },
+          {
+            "id": "35"
+          },
+          {
+            "id": "36"
+          },
+          {
+            "id": "37",
+            "vertices": [
+              {
+                "x": 4925,
+                "y": 2250
+              }
+            ]
+          },
+          {
+            "id": "38"
+          },
+          {
+            "id": "39"
+          },
+          {
+            "id": "40"
+          },
+          {
+            "id": "41"
+          },
+          {
+            "id": "42"
+          },
+          {
+            "id": "43"
+          },
+          {
+            "id": "44"
+          },
+          {
+            "id": "45",
+            "position": 30,
+            "vertices": [
+              {
+                "x": 2500,
+                "y": 1450
+              }
+            ]
+          },
+          {
+            "id": "46",
+            "position": 70,
+            "vertices": [
+              {
+                "x": 2700,
+                "y": 1450
+              }
+            ]
+          },
+          {
+            "id": "47"
+          },
+          {
+            "id": "48",
+            "vertices": [
+              {
+                "x": 2345,
+                "y": 2300
+              },
+              {
+                "x": 2345,
+                "y": 3000
+              }
+            ]
+          },
+          {
+            "id": "49",
+            "vertices": [
+              {
+                "x": 2505,
+                "y": 2300
+              },
+              {
+                "x": 2505,
+                "y": 3000
+              }
+            ]
+          },
+          {
+            "id": "50"
+          },
+          {
+            "id": "51",
+            "vertices": [
+              {
+                "x": 5450,
+                "y": 1450
+              }
+            ]
+          },
+          {
+            "id": "52"
+          },
+          {
+            "id": "53",
+            "vertices": [
+              {
+                "x": 6060,
+                "y": 2300
+              },
+              {
+                "x": 6060,
+                "y": 3000
+              }
+            ]
+          },
+          {
+            "id": "54",
+            "vertices": [
+              {
+                "x": 6200,
+                "y": 2300
+              },
+              {
+                "x": 6200,
+                "y": 3000
+              }
+            ]
+          },
+          {
+            "id": "55"
+          },
+          {
+            "id": "56",
+            "position": 75
+          },
+          {
+            "id": "57",
+            "position": 75
+          },
+          {
+            "id": "58"
+          },
+          {
+            "id": "59"
+          },
+          {
+            "id": "60"
+          }
+        ],
+        "softwareSystemId": "3"
+      }
+    ],
+    "systemContextViews": [
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "description": "Level 1: Who uses Happy Headlines.",
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "2",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "3",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "24",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "enterpriseBoundaryVisible": true,
+        "key": "SystemContext",
+        "name": "System Context View: Happy Headlines",
+        "order": 1,
+        "relationships": [
+          {
+            "id": "25"
+          },
+          {
+            "id": "26"
+          },
+          {
+            "id": "27"
+          },
+          {
+            "id": "28"
+          }
+        ],
+        "softwareSystemId": "3"
+      }
+    ]
+  }
+}

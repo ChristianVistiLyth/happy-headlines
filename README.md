@@ -16,4 +16,5 @@ How changes are made (issue → branch → pull request): [COLLABORATION.md](COL
 | 39 | Publishing through a queue (RabbitMQ), with traces that stay whole across services | [week-39](Old%20weeks/week-39) |
 | 40 | ArticleCache and CommentCache (Redis), and a cache hit-ratio dashboard (Grafana, Prometheus) | [week-40](Old%20weeks/week-40) |
 | 43 | CI/CD: GitHub Actions builds every service and delivers versioned images to ghcr.io | [week-43](Old%20weeks/week-43) |
-| 44 | SubscriberService behind a release toggle, with fault isolation from NewsletterService | [week-44](week-44) |
+| 44 | SubscriberService behind a release toggle, with fault isolation from NewsletterService | [week-44](Old%20weeks/week-44) |
+| 45 | Sustainability: three Green Architecture Framework tactics, measured before and after | [week-45](week-45) |
