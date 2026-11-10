@@ -3,8 +3,14 @@
 @baseUrl = http://localhost:8081
 @region = europe
 
-### List the articles in a region (newest first)
+### The 10 newest articles in a region (page 1)
 GET {{baseUrl}}/api/regions/{{region}}/articles
+
+### The next 10 (page 2)
+GET {{baseUrl}}/api/regions/{{region}}/articles?page=2
+
+### A bigger page (at most 50; 51 gives 400 Bad Request)
+GET {{baseUrl}}/api/regions/{{region}}/articles?pageSize=50
 
 ### Only the articles published after a point in time (what the daily newsletter asks for)
 GET {{baseUrl}}/api/regions/{{region}}/articles?since=2026-11-09T06:00:00Z
