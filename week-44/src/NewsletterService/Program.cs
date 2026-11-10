@@ -15,6 +15,9 @@ var rabbitMq = builder.Configuration["RabbitMQ:ConnectionString"]
 builder.Services.AddEasyNetQ(rabbitMq).UseSystemTextJson();
 builder.Services.AddHostedService<ArticleQueueSubscriber>();
 
+// Welcome mail: every new subscriber arrives on the SubscriberQueue (same RabbitMQ)
+builder.Services.AddHostedService<SubscriberQueueSubscriber>();
+
 // Daily newsletter: asks ArticleService (through the load balancer) for the latest articles
 var articleServiceUrl = builder.Configuration["ArticleService:BaseUrl"]
     ?? throw new InvalidOperationException("Missing setting 'ArticleService:BaseUrl'");

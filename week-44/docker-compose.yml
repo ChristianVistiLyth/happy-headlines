@@ -1,4 +1,5 @@
-# Week 44: SubscriberService in its own swimlane (own service and database).
+# Week 44: SubscriberService in its own swimlane (own service and database). A new subscriber goes on the
+# SubscriberQueue (RabbitMQ), and NewsletterService sends the welcome mail.
 # Week 43: a CI/CD pipeline builds every service and delivers versioned images to ghcr.io (see .github/workflows).
 # Week 40: caches in front of the far-away databases, and a dashboard with their hit ratio.
 # ArticleCache (Redis) sits between ArticleService and the Global article database, filled by an offline process;
@@ -15,7 +16,7 @@
 #   http://localhost:8085/swagger  PublisherService
 #   http://localhost:8086/swagger  NewsletterService
 #   http://localhost:8087/swagger  SubscriberService
-#   http://localhost:15672         RabbitMQ (ArticleQueue) - login guest / guest
+#   http://localhost:15672         RabbitMQ (ArticleQueue, SubscriberQueue) - login guest / guest
 
 # Shared settings for the eight region databases
 x-article-database: &article-database
@@ -331,8 +332,12 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
       ConnectionStrings__SubscriberDatabase: Host=subscriber-db;Database=subscribers;Username=postgres;Password=postgres
+      # publisherConfirms: RabbitMQ confirms it has the message; timeout: give up after 2 s if it doesn't answer
+      # (shorter than PublisherService's 5 s: only the welcome mail is at stake, so the reader shouldn't wait long)
+      RabbitMQ__ConnectionString: host=rabbitmq;publisherConfirms=true;timeout=2
     ports:
       - "8087:8080"
+    # Deliberately NOT depending on rabbitmq: if it is down, subscribing still works (without a welcome mail)
     depends_on:
       subscriber-db: { condition: service_healthy }
 

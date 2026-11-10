@@ -1,3 +1,4 @@
+using EasyNetQ;
 using Microsoft.EntityFrameworkCore;
 using Monitoring;
 using Npgsql;
@@ -14,6 +15,11 @@ var connectionString = builder.Configuration.GetConnectionString("SubscriberData
 // We don't use Kerberos login; without this the database driver probes for it and logs an error
 var connection = new NpgsqlConnectionStringBuilder(connectionString) { GssEncryptionMode = GssEncryptionMode.Disable };
 builder.Services.AddDbContext<SubscriberDbContext>(options => options.UseNpgsql(connection.ConnectionString));
+
+// The SubscriberQueue lives in RabbitMQ (next to the ArticleQueue); EasyNetQ creates the exchange and queues for us
+var rabbitMq = builder.Configuration["RabbitMQ:ConnectionString"]
+    ?? throw new InvalidOperationException("Missing setting 'RabbitMQ:ConnectionString'");
+builder.Services.AddEasyNetQ(rabbitMq).UseSystemTextJson();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
