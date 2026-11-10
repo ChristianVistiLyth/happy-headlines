@@ -3,8 +3,11 @@ namespace NewsletterService.Clients;
 /// <summary>Asks ArticleService (through the load balancer) for the articles of one region.</summary>
 public class ArticleClient(HttpClient http)
 {
-    public async Task<List<ArticleSummary>> GetArticlesAsync(string region, CancellationToken cancellationToken) =>
-        await http.GetFromJsonAsync<List<ArticleSummary>>($"api/regions/{region}/articles", cancellationToken)
+    // Only the articles published after "since" travel over the network (GAF "Reduce Network Package Size")
+    public async Task<List<ArticleSummary>> GetArticlesSinceAsync(string region, DateTime since,
+        CancellationToken cancellationToken) =>
+        await http.GetFromJsonAsync<List<ArticleSummary>>(
+            $"api/regions/{region}/articles?since={Uri.EscapeDataString(since.ToString("O"))}", cancellationToken)
         ?? [];
 }
 

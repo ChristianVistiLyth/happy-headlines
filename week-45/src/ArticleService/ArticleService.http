@@ -6,6 +6,9 @@
 ### List the articles in a region (newest first)
 GET {{baseUrl}}/api/regions/{{region}}/articles
 
+### Only the articles published after a point in time (what the daily newsletter asks for)
+GET {{baseUrl}}/api/regions/{{region}}/articles?since=2026-11-09T06:00:00Z
+
 ### Get one article (Europe's first sample article)
 GET {{baseUrl}}/api/regions/{{region}}/articles/00000004-0000-0000-0000-000000000001
 

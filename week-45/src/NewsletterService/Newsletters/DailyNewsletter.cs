@@ -22,8 +22,8 @@ public class DailyNewsletter(ArticleClient articles, SubscriberList subscribers,
         {
             try
             {
-                var latest = await articles.GetArticlesAsync(region, cancellationToken);
-                articleCount += latest.Count(a => a.PublishedAt >= since);
+                var latest = await articles.GetArticlesSinceAsync(region, since, cancellationToken);
+                articleCount += latest.Count;
             }
             catch (HttpRequestException e)
             {
