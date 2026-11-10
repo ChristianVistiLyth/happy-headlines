@@ -1,5 +1,6 @@
 using EasyNetQ;
 using Microsoft.Extensions.Http.Resilience;
+using Microsoft.FeatureManagement;
 using Monitoring;
 using NewsletterService.Clients;
 using NewsletterService.Messaging;
@@ -10,6 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Central logging and tracing (shared Monitoring library)
 builder.AddMonitoring();
+
+// Release toggle: read from the mounted toggles.json and re-read while running, so the toggle can be flipped
+// without any redeploy. Toggles:File points at the file; when it is missing, the toggle counts as OFF.
+builder.Configuration.AddJsonFile(builder.Configuration["Toggles:File"] ?? "toggles.json", optional: true, reloadOnChange: true);
+builder.Services.AddFeatureManagement();
 
 // Immediate newsletter: every published article arrives on the ArticleQueue (RabbitMQ)
 var rabbitMq = builder.Configuration["RabbitMQ:ConnectionString"]

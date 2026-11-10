@@ -1,5 +1,6 @@
 # Week 44: SubscriberService in its own swimlane (own service and database). A new subscriber goes on the
-# SubscriberQueue (RabbitMQ), and NewsletterService sends the welcome mail.
+# SubscriberQueue (RabbitMQ), and NewsletterService sends the welcome mail. SubscriberService is behind a release
+# toggle in toggles/toggles.json: flip "SubscriberService" to false/true while running - no redeploy needed.
 # Week 43: a CI/CD pipeline builds every service and delivers versioned images to ghcr.io (see .github/workflows).
 # Week 40: caches in front of the far-away databases, and a dashboard with their hit ratio.
 # ArticleCache (Redis) sits between ArticleService and the Global article database, filled by an offline process;
@@ -129,8 +130,14 @@ services:
       ArticleService__BaseUrl: http://article-load-balancer/
       SubscriberService__BaseUrl: http://subscriber-service:8080/
       Newsletter__DailySendTimeUtc: "06:00"
+      # Release toggle: toggles.json is read from the mounted folder and re-read every few seconds (polling,
+      # because Docker on Windows doesn't report file changes into the container)
+      Toggles__File: /toggles/toggles.json
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
     ports:
       - "8086:8080"
+    volumes:
+      - ./toggles:/toggles:ro
 
   # ArticleDatabase, z-axis split: one database per continent + one for global news
   article-db-africa:
@@ -337,8 +344,14 @@ services:
       # publisherConfirms: RabbitMQ confirms it has the message; timeout: give up after 2 s if it doesn't answer
       # (shorter than PublisherService's 5 s: only the welcome mail is at stake, so the reader shouldn't wait long)
       RabbitMQ__ConnectionString: host=rabbitmq;publisherConfirms=true;timeout=2
+      # Release toggle: toggles.json is read from the mounted folder and re-read every few seconds (polling,
+      # because Docker on Windows doesn't report file changes into the container)
+      Toggles__File: /toggles/toggles.json
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
     ports:
       - "8087:8080"
+    volumes:
+      - ./toggles:/toggles:ro
     # Deliberately NOT depending on rabbitmq: if it is down, subscribing still works (without a welcome mail)
     depends_on:
       subscriber-db: { condition: service_healthy }
