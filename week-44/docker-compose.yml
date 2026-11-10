@@ -115,7 +115,8 @@ services:
       - "8085:8080"
     # Deliberately NOT depending on rabbitmq or profanity-service: if one is down, publishing answers 503
 
-  # Sends newsletters: immediately for every article on the ArticleQueue, and once a day with the latest articles
+  # Newsletter swimlane. Sends newsletters: immediately for every article on the ArticleQueue, and once a day with the
+  # latest articles - to the subscribers it gets from SubscriberService (through a circuit breaker: fault isolation)
   newsletter-service:
     build:
       context: ./src
@@ -126,6 +127,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://monitoring:4317
       RabbitMQ__ConnectionString: host=rabbitmq
       ArticleService__BaseUrl: http://article-load-balancer/
+      SubscriberService__BaseUrl: http://subscriber-service:8080/
       Newsletter__DailySendTimeUtc: "06:00"
     ports:
       - "8086:8080"

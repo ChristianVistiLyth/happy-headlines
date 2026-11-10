@@ -1,6 +1,7 @@
 using EasyNetQ;
 using Messages;
 using Monitoring;
+using NewsletterService.Clients;
 using NewsletterService.Newsletters;
 
 namespace NewsletterService.Messaging;
@@ -10,7 +11,8 @@ namespace NewsletterService.Messaging;
 /// Its own subscription id gives NewsletterService its own queue, so it gets a copy of EVERY article,
 /// next to the copy the ArticleService instances share.
 /// </summary>
-public class ArticleQueueSubscriber(IBus bus, NewsletterSender sender, ILogger<ArticleQueueSubscriber> logger)
+public class ArticleQueueSubscriber(IBus bus, SubscriberList subscribers, NewsletterSender sender,
+    ILogger<ArticleQueueSubscriber> logger)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,13 +35,13 @@ public class ArticleQueueSubscriber(IBus bus, NewsletterSender sender, ILogger<A
         }
     }
 
-    private Task SendImmediateAsync(ArticlePublished message, CancellationToken cancellationToken)
+    private async Task SendImmediateAsync(ArticlePublished message, CancellationToken cancellationToken)
     {
         // Continue the publisher's trace: its trace context travelled inside the message
         using var activity = Tracing.StartReceive("receive article", message.Headers);
         activity?.SetTag("article.id", message.Id);
 
-        sender.SendImmediate(message.Id, message.Region);
-        return Task.CompletedTask;
+        var recipients = await subscribers.GetAsync(cancellationToken);
+        sender.SendImmediate(message.Id, message.Region, recipients);
     }
 }

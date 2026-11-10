@@ -4,7 +4,8 @@ using NewsletterService.Clients;
 namespace NewsletterService.Newsletters;
 
 /// <summary>Collects the articles of the last 24 hours from all eight regions and sends them as one newsletter.</summary>
-public class DailyNewsletter(ArticleClient articles, NewsletterSender sender, ILogger<DailyNewsletter> logger)
+public class DailyNewsletter(ArticleClient articles, SubscriberList subscribers, NewsletterSender sender,
+    ILogger<DailyNewsletter> logger)
 {
     private static readonly string[] Regions =
         ["Africa", "Antarctica", "Asia", "Europe", "NorthAmerica", "Oceania", "SouthAmerica", "Global"];
@@ -32,7 +33,8 @@ public class DailyNewsletter(ArticleClient articles, NewsletterSender sender, IL
             }
         }
 
-        sender.SendDaily(articleCount);
+        var recipients = await subscribers.GetAsync(cancellationToken);
+        sender.SendDaily(articleCount, recipients);
         return articleCount;
     }
 }
