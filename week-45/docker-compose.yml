@@ -1,3 +1,5 @@
+# Week 45: greener - Alpine images, a paged article list and a daily newsletter that only fetches the last 24 hours
+# (see SUSTAINABILITY.md; measure with tools/measure.sh).
 # Week 44: SubscriberService in its own swimlane (own service and database). A new subscriber goes on the
 # SubscriberQueue (RabbitMQ), and NewsletterService sends the welcome mail. SubscriberService is behind a release
 # toggle in toggles/toggles.json: flip "SubscriberService" to false/true while running - no redeploy needed.
