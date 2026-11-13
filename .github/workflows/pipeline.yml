@@ -1,6 +1,6 @@
 # CI/CD for Happy Headlines: builds every service on each change, and delivers versioned Docker images
 # to the GitHub Container Registry (ghcr.io) when something new arrives on main.
-#   push to main   -> compile, then build AND push the 7 images
+#   push to main   -> compile, then build AND push the 8 images
 #   pull request   -> compile and build the images, but push nothing
 name: Build and deliver
 
